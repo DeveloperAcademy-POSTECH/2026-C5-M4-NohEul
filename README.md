@@ -1,10 +1,10 @@
-# concurrent-purchaseapi
+# coffee-coupon-api
 
-재고 동시 차감 시 발생하는 race condition을 방지하는 방법을 학습하기 위한 프로젝트입니다.
+선착순 커피 쿠폰 발급 시 발생하는 race condition을 방지하는 방법을 학습하기 위한 프로젝트입니다.
 
 ## 프로젝트 소개
 
-여러 사용자가 동시에 같은 상품을 구매할 때 재고 수량을 안전하게 차감하는 방법을 다룹니다.
+정해진 수량의 커피 쿠폰을 여러 사용자가 동시에 요청할 때, 수량을 초과해서 발급되지 않도록 안전하게 처리하는 방법을 다룹니다.
 비관적 락, 낙관적 락, 분산 락 등 다양한 동시성 제어 기법을 적용하고 비교해보는 것을 목표로 합니다.
 
 ## 기술 스택
@@ -27,14 +27,14 @@
 ### 실행
 
 ```bash
-cd concurrent-purchaseapi
+cd coffee-coupon-api
 ./gradlew bootRun
 ```
 
 ### 테스트
 
 ```bash
-cd concurrent-purchaseapi
+cd coffee-coupon-api
 ./gradlew test
 ```
 
@@ -63,4 +63,4 @@ Git Flow를 따릅니다.
 - `feature/optimistic-lock`
 - `feature/distributed-lock`
 - `release/0.1.0`
-- `hotfix/stock-underflow`
+- `hotfix/coupon-overissue`
