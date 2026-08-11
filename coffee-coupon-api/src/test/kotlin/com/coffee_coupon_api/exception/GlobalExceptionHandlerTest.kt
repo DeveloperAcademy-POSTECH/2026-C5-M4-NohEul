@@ -2,6 +2,7 @@ package com.coffee_coupon_api.exception
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 
 class GlobalExceptionHandlerTest {
@@ -27,6 +28,14 @@ class GlobalExceptionHandlerTest {
     @Test
     fun `중복 발급이면 409를 반환한다`() {
         val response = handler.handleDuplicate(DuplicateIssueException(1L, 1L))
+
+        assertEquals(HttpStatus.CONFLICT, response.statusCode)
+        assertEquals("DUPLICATE_ISSUE", response.body?.code)
+    }
+
+    @Test
+    fun `중복 저장으로 인한 무결성 위반이면 409를 반환한다`() {
+        val response = handler.handleDataIntegrityViolation(DataIntegrityViolationException("test"))
 
         assertEquals(HttpStatus.CONFLICT, response.statusCode)
         assertEquals("DUPLICATE_ISSUE", response.body?.code)

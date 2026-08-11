@@ -8,6 +8,7 @@ import com.coffee_coupon_api.exception.DuplicateIssueException
 import com.coffee_coupon_api.repository.CouponIssueRepository
 import com.coffee_coupon_api.repository.CouponRepository
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class CouponService(
@@ -15,6 +16,7 @@ class CouponService(
     private val couponIssueRepository: CouponIssueRepository,
 ) {
 
+    @Transactional
     fun issue(couponId: Long, userId: Long): CouponIssue {
         val coupon = couponRepository.findById(couponId)
             .orElseThrow { CouponNotFoundException(couponId) }
@@ -33,6 +35,7 @@ class CouponService(
         return couponIssueRepository.save(CouponIssue(couponId = couponId, userId = userId))
     }
 
+    @Transactional(readOnly = true)
     fun getCoupon(couponId: Long): Coupon =
         couponRepository.findById(couponId)
             .orElseThrow { CouponNotFoundException(couponId) }
