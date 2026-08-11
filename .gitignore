@@ -1,2 +1,2 @@
 .superpowers/
-coffee-coupon-api/src/main/resources/application.yaml
+coffee-coupon-api/src/main/resources/application-local.yaml
