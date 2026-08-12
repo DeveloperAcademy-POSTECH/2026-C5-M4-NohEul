@@ -1,2 +1,6 @@
 .superpowers/
 coffee-coupon-api/src/main/resources/application-local.yaml
+.idea/
+.claude/settings.local.json
+.claude/agents/concurrency-tutor.md
+.claude/agents/spring-kotlin-tutor.md
