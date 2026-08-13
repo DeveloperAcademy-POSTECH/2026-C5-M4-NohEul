@@ -6,6 +6,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -20,7 +21,7 @@ class CouponServiceConcurrencyTest {
     lateinit var couponRepository: CouponRepository
 
     @Test
-    fun `재고 1개짜리 쿠폰에 N명이 동시에 요청하면 락 없이는 재고가 깨진다`() {
+    fun `비관적 락을 걸면 재고 1개짜리 쿠폰에 N명이 동시에 요청해도 1명만 성공한다`() {
         val coupon = couponRepository.save(Coupon(name = "아메리카노", totalQuantity = 1, issuedQuantity = 0))
         val threadCount = 30
         val executor = Executors.newFixedThreadPool(threadCount)
@@ -52,5 +53,9 @@ class CouponServiceConcurrencyTest {
             "[재현 결과] totalQuantity=1, 동시 요청=$threadCount, " +
                 "성공=${successCount.get()}, 실패=${failCount.get()}, 최종 issuedQuantity=${finalCoupon.issuedQuantity}",
         )
+
+        assertEquals(1, successCount.get())
+        assertEquals(threadCount - 1, failCount.get())
+        assertEquals(1, finalCoupon.issuedQuantity)
     }
 }

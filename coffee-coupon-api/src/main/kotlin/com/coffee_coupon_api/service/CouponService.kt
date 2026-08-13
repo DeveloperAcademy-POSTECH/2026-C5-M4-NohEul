@@ -18,7 +18,7 @@ class CouponService(
 
     @Transactional
     fun issue(couponId: Long, userId: Long): CouponIssue {
-        val coupon = couponRepository.findById(couponId)
+        val coupon = couponRepository.findByIdForUpdate(couponId)
             .orElseThrow { CouponNotFoundException(couponId) }
 
         if (couponIssueRepository.existsByCouponIdAndUserId(couponId, userId)) {

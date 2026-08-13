@@ -32,7 +32,7 @@ class CouponServiceTest {
     @Test
     fun `발급 가능한 쿠폰은 정상적으로 발급된다`() {
         val coupon = Coupon(name = "아메리카노", totalQuantity = 10, issuedQuantity = 0)
-        `when`(couponRepository.findById(1L)).thenReturn(Optional.of(coupon))
+        `when`(couponRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(coupon))
         `when`(couponIssueRepository.existsByCouponIdAndUserId(1L, 100L)).thenReturn(false)
         `when`(couponRepository.save(coupon)).thenReturn(coupon)
         val savedIssue = CouponIssue(couponId = 1L, userId = 100L)
@@ -46,7 +46,7 @@ class CouponServiceTest {
 
     @Test
     fun `존재하지 않는 쿠폰이면 CouponNotFoundException이 발생한다`() {
-        `when`(couponRepository.findById(999L)).thenReturn(Optional.empty())
+        `when`(couponRepository.findByIdForUpdate(999L)).thenReturn(Optional.empty())
 
         assertThrows(CouponNotFoundException::class.java) {
             couponService.issue(999L, 100L)
@@ -56,7 +56,7 @@ class CouponServiceTest {
     @Test
     fun `이미 발급받은 사용자는 DuplicateIssueException이 발생한다`() {
         val coupon = Coupon(name = "아메리카노", totalQuantity = 10, issuedQuantity = 1)
-        `when`(couponRepository.findById(1L)).thenReturn(Optional.of(coupon))
+        `when`(couponRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(coupon))
         `when`(couponIssueRepository.existsByCouponIdAndUserId(1L, 100L)).thenReturn(true)
 
         assertThrows(DuplicateIssueException::class.java) {
@@ -67,7 +67,7 @@ class CouponServiceTest {
     @Test
     fun `재고가 소진되면 CouponSoldOutException이 발생한다`() {
         val coupon = Coupon(name = "아메리카노", totalQuantity = 1, issuedQuantity = 1)
-        `when`(couponRepository.findById(1L)).thenReturn(Optional.of(coupon))
+        `when`(couponRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(coupon))
         `when`(couponIssueRepository.existsByCouponIdAndUserId(1L, 100L)).thenReturn(false)
 
         assertThrows(CouponSoldOutException::class.java) {
