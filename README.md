@@ -22,7 +22,7 @@
 ### 사전 준비
 
 - JDK 17
-- MySQL 실행 및 `src/main/resources/application.yaml`에 접속 정보 설정
+- MySQL 실행 후 `coffee-coupon-api/src/main/resources/application-local.yaml.example`을 같은 디렉토리에 `application-local.yaml`로 복사하고 실제 MySQL 접속 정보(비밀번호 등)를 입력하세요.
 
 ### 실행
 
