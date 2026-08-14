@@ -4,12 +4,14 @@ import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import java.time.LocalDateTime
 
 @Entity
-class Coupon(
-    var name: String,
+class CouponCampaign(
+    var couponTemplateId: Long,
     var totalQuantity: Int,
     var issuedQuantity: Int = 0,
+    var openAt: LocalDateTime = LocalDateTime.now(),
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

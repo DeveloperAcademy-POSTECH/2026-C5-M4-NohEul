@@ -11,10 +11,10 @@ import java.time.LocalDateTime
 @Entity
 @Table(
     name = "coupon_issue",
-    uniqueConstraints = [UniqueConstraint(columnNames = ["coupon_id", "user_id"])],
+    uniqueConstraints = [UniqueConstraint(columnNames = ["coupon_campaign_id", "user_id"])],
 )
 class CouponIssue(
-    var couponId: Long,
+    var couponCampaignId: Long,
     var userId: Long,
     var issuedAt: LocalDateTime = LocalDateTime.now(),
 ) {

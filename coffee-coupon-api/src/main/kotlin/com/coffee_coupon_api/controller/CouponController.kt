@@ -47,7 +47,7 @@ class CouponController(
     ): CouponIssueResponse {
         val issue = couponService.issue(couponId, request.userId)
         return CouponIssueResponse(
-            couponId = issue.couponId,
+            couponId = issue.couponCampaignId,
             userId = issue.userId,
             issuedAt = issue.issuedAt,
         )
@@ -64,13 +64,13 @@ class CouponController(
     )
     @GetMapping("/{couponId}")
     fun getCoupon(@Parameter(description = "조회할 쿠폰 ID") @PathVariable couponId: Long): CouponResponse {
-        val coupon = couponService.getCoupon(couponId)
+        val (campaign, template) = couponService.getCoupon(couponId)
         return CouponResponse(
-            id = coupon.id!!,
-            name = coupon.name,
-            totalQuantity = coupon.totalQuantity,
-            issuedQuantity = coupon.issuedQuantity,
-            remainingQuantity = coupon.totalQuantity - coupon.issuedQuantity,
+            id = campaign.id!!,
+            name = template.name,
+            totalQuantity = campaign.totalQuantity,
+            issuedQuantity = campaign.issuedQuantity,
+            remainingQuantity = campaign.totalQuantity - campaign.issuedQuantity,
         )
     }
 }
