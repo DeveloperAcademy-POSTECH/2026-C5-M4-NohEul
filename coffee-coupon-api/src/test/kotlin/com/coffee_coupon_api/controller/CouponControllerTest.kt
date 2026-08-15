@@ -6,6 +6,7 @@ import com.coffee_coupon_api.domain.CouponTemplate
 import com.coffee_coupon_api.repository.CouponCampaignRepository
 import com.coffee_coupon_api.repository.CouponIssueRepository
 import com.coffee_coupon_api.repository.CouponTemplateRepository
+import java.time.LocalDateTime
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -98,6 +99,27 @@ class CouponControllerTest {
         )
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.code").value("COUPON_SOLD_OUT"))
+    }
+
+    @Test
+    fun `오픈 전 쿠폰 발급 요청은 403을 반환한다`() {
+        val futureTemplate = couponTemplateRepository.save(CouponTemplate(name = "아이스티", discountRate = 20))
+        val futureCampaign = couponCampaignRepository.save(
+            CouponCampaign(
+                couponTemplateId = futureTemplate.id!!,
+                totalQuantity = 10,
+                issuedQuantity = 0,
+                openAt = LocalDateTime.now().plusHours(1),
+            ),
+        )
+
+        mockMvc.perform(
+            post("/api/coupons/${futureCampaign.id}/issue")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(mapOf("userId" to 1L))),
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("COUPON_NOT_YET_OPEN"))
     }
 
     @Test

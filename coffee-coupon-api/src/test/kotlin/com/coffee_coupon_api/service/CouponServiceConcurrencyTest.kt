@@ -4,6 +4,7 @@ import com.coffee_coupon_api.domain.CouponCampaign
 import com.coffee_coupon_api.domain.CouponTemplate
 import com.coffee_coupon_api.repository.CouponCampaignRepository
 import com.coffee_coupon_api.repository.CouponTemplateRepository
+import java.time.LocalDateTime
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -29,7 +30,12 @@ class CouponServiceConcurrencyTest {
     fun `비관적 락을 걸면 재고 1개짜리 쿠폰에 N명이 동시에 요청해도 1명만 성공한다`() {
         val template = couponTemplateRepository.save(CouponTemplate(name = "아메리카노", discountRate = 10))
         val campaign = couponCampaignRepository.save(
-            CouponCampaign(couponTemplateId = template.id!!, totalQuantity = 1, issuedQuantity = 0),
+            CouponCampaign(
+                couponTemplateId = template.id!!,
+                totalQuantity = 1,
+                issuedQuantity = 0,
+                openAt = LocalDateTime.now().minusMinutes(1),
+            ),
         )
         val threadCount = 30
         val executor = Executors.newFixedThreadPool(threadCount)
