@@ -1,5 +1,6 @@
 package com.coffee_coupon_api.exception
 
+import java.time.LocalDateTime
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.dao.DataIntegrityViolationException
@@ -39,5 +40,13 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.CONFLICT, response.statusCode)
         assertEquals("DUPLICATE_ISSUE", response.body?.code)
+    }
+
+    @Test
+    fun `오픈 전 발급 요청이면 403을 반환한다`() {
+        val response = handler.handleNotYetOpen(CouponNotYetOpenException(1L, LocalDateTime.of(2026, 8, 14, 10, 0)))
+
+        assertEquals(HttpStatus.FORBIDDEN, response.statusCode)
+        assertEquals("COUPON_NOT_YET_OPEN", response.body?.code)
     }
 }
