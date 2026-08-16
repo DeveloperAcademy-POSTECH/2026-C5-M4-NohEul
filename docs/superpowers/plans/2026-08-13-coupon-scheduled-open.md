@@ -857,11 +857,11 @@ class CouponService(
 
     @Transactional
     fun issue(couponCampaignId: Long, userId: Long): CouponIssue {
-        val campaignPreview = couponCampaignRepository.findById(couponCampaignId)
-            .orElseThrow { CouponNotFoundException(couponCampaignId) }
+        val openAt = couponCampaignRepository.findOpenAtById(couponCampaignId)
+            ?: throw CouponNotFoundException(couponCampaignId)
 
-        if (LocalDateTime.now(clock).isBefore(campaignPreview.openAt)) {
-            throw CouponNotYetOpenException(couponCampaignId, campaignPreview.openAt)
+        if (LocalDateTime.now(clock).isBefore(openAt)) {
+            throw CouponNotYetOpenException(couponCampaignId, openAt)
         }
 
         val campaign = couponCampaignRepository.findByIdForUpdate(couponCampaignId)
@@ -891,6 +891,8 @@ class CouponService(
     }
 }
 ```
+
+**주의: `findOpenAtById`는 엔티티가 아닌 `openAt` 컬럼만 읽는 스칼라 프로젝션이어야 한다.** 처음에는 `couponCampaignRepository.findById(couponCampaignId)`로 `CouponCampaign` 엔티티를 미리 읽는 안을 구현했으나, 같은 트랜잭션 안에서 엔티티를 한 번 영속성 컨텍스트에 올린 뒤 바로 아래에서 `findByIdForUpdate`로 다시 조회하면 SQL은 `SELECT ... FOR UPDATE`로 다시 나가지만 Hibernate가 1차 캐시(identity map)에 이미 올라온 같은 인스턴스를 그대로 반환해버려 비관적 락이 조용히 무력화되는 문제가 있었다. Task 5의 동시성 테스트에서 기대한 "30개 동시 요청 → 1명만 성공"이 아니라 "10명 성공"으로 재현되어 발견했고, 이후 `findById`를 `findOpenAtById` 스칼라 프로젝션으로 교체해 해결했다.
 
 - [ ] **Step 5: `Clock` 빈 등록**
 

@@ -36,11 +36,11 @@
 ```kotlin
 @Transactional
 fun issue(couponCampaignId: Long, userId: Long): CouponIssue {
-    val campaignPreview = couponCampaignRepository.findById(couponCampaignId)     // ① 락 없는 조회
-        .orElseThrow { CouponNotFoundException(couponCampaignId) }
+    val openAt = couponCampaignRepository.findOpenAtById(couponCampaignId)        // ① 락 없는 스칼라 조회
+        ?: throw CouponNotFoundException(couponCampaignId)
 
-    if (LocalDateTime.now(clock).isBefore(campaignPreview.openAt)) {
-        throw CouponNotYetOpenException(couponCampaignId, campaignPreview.openAt)  // ② 오픈 전이면 락 걸기 전에 컷
+    if (LocalDateTime.now(clock).isBefore(openAt)) {
+        throw CouponNotYetOpenException(couponCampaignId, openAt)                 // ② 오픈 전이면 락 걸기 전에 컷
     }
 
     val campaign = couponCampaignRepository.findByIdForUpdate(couponCampaignId)   // ③ 오픈 후에만 락 조회
@@ -62,6 +62,8 @@ fun issue(couponCampaignId: Long, userId: Long): CouponIssue {
 ```
 
 락/오픈 시각 판단 로직 자체는 어제 설계와 동일하다 — 대상이 `Coupon`에서 `CouponCampaign`으로 바뀌었을 뿐이다. DB 조회가 2번(①③) 나가는 이유(오픈 전 요청은 락 비용을 안 치르게 하려는 의도적 트레이드오프)도 그대로 유지된다.
+
+**주의: ①은 엔티티가 아닌 `openAt` 단일 컬럼만 읽는 스칼라 프로젝션(`findOpenAtById`)이어야 한다.** 처음에는 `findById`로 `CouponCampaign` 엔티티를 미리 읽는 안을 채택했으나, 같은 트랜잭션 안에서 엔티티를 한 번 영속성 컨텍스트에 올린 뒤 ③에서 `findByIdForUpdate`로 다시 조회하면 SQL은 `SELECT ... FOR UPDATE`로 다시 나가지만 Hibernate가 1차 캐시(영속성 컨텍스트의 identity map)에 이미 올라온 같은 인스턴스를 그대로 반환해버려 비관적 락이 조용히 무력화되는 문제가 있었다. 30개 동시 요청 테스트(`CouponServiceConcurrencyTest`)에서 기대한 "1명만 성공"이 아니라 "10명 성공"으로 재현되어 발견했다. `findOpenAtById`는 엔티티가 아닌 `LocalDateTime`만 반환하므로 영속성 컨텍스트에 아무것도 등록되지 않아 이 충돌이 발생하지 않는다.
 
 ## 테스트 가능한 시간 — `Clock` 주입
 
