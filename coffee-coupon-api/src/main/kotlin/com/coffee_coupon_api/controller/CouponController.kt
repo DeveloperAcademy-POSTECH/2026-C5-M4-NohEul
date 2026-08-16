@@ -30,6 +30,11 @@ class CouponController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "발급 성공"),
         ApiResponse(
+            responseCode = "403",
+            description = "아직 오픈되지 않은 쿠폰(COUPON_NOT_YET_OPEN)",
+            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+        ),
+        ApiResponse(
             responseCode = "404",
             description = "쿠폰을 찾을 수 없음",
             content = [Content(schema = Schema(implementation = ErrorResponse::class))],

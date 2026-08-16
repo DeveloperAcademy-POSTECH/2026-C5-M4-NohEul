@@ -55,10 +55,20 @@ class CouponServiceTest {
 
     @Test
     fun `존재하지 않는 쿠폰이면 CouponNotFoundException이 발생한다`() {
-        `when`(couponCampaignRepository.findByIdForUpdate(999L)).thenReturn(Optional.empty())
+        `when`(couponCampaignRepository.findOpenAtById(999L)).thenReturn(null)
 
         assertThrows(CouponNotFoundException::class.java) {
             couponService.issue(999L, 100L)
+        }
+    }
+
+    @Test
+    fun `오픈 시각 조회 이후 캠페인이 삭제되면 CouponNotFoundException이 발생한다`() {
+        `when`(couponCampaignRepository.findOpenAtById(1L)).thenReturn(LocalDateTime.now().minusMinutes(1))
+        `when`(couponCampaignRepository.findByIdForUpdate(1L)).thenReturn(Optional.empty())
+
+        assertThrows(CouponNotFoundException::class.java) {
+            couponService.issue(1L, 100L)
         }
     }
 
@@ -74,6 +84,27 @@ class CouponServiceTest {
         assertThrows(CouponNotYetOpenException::class.java) {
             serviceWithFixedClock.issue(1L, 100L)
         }
+    }
+
+    @Test
+    fun `오픈 시각 정각에 발급 요청하면 정상적으로 발급된다`() {
+        val openAt = LocalDateTime.of(2026, 8, 14, 10, 0)
+        val exactlyOpenInstant = openAt.atZone(ZoneId.systemDefault()).toInstant()
+        val fixedClock = Clock.fixed(exactlyOpenInstant, ZoneId.systemDefault())
+        val serviceWithFixedClock =
+            CouponService(couponCampaignRepository, couponTemplateRepository, couponIssueRepository, fixedClock)
+        val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 0, openAt = openAt)
+        `when`(couponCampaignRepository.findOpenAtById(1L)).thenReturn(openAt)
+        `when`(couponCampaignRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(campaign))
+        `when`(couponIssueRepository.existsByCouponCampaignIdAndUserId(1L, 100L)).thenReturn(false)
+        `when`(couponCampaignRepository.save(campaign)).thenReturn(campaign)
+        val savedIssue = CouponIssue(couponCampaignId = 1L, userId = 100L)
+        `when`(couponIssueRepository.save(any(CouponIssue::class.java))).thenReturn(savedIssue)
+
+        val result = serviceWithFixedClock.issue(1L, 100L)
+
+        assertEquals(1, campaign.issuedQuantity)
+        assertEquals(100L, result.userId)
     }
 
     @Test

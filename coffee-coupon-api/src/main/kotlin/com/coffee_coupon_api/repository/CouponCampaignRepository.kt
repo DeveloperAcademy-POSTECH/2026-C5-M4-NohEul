@@ -15,6 +15,8 @@ interface CouponCampaignRepository : JpaRepository<CouponCampaign, Long> {
     @Query("select c from CouponCampaign c where c.id = :id")
     fun findByIdForUpdate(@Param("id") id: Long): Optional<CouponCampaign>
 
+    // 스칼라 프로젝션이어야 한다. 엔티티로 읽으면 영속성 컨텍스트에 올라가고,
+    // 뒤따르는 findByIdForUpdate가 1차 캐시의 stale 인스턴스를 돌려줘 비관적 락이 무력화된다.
     @Query("select c.openAt from CouponCampaign c where c.id = :id")
     fun findOpenAtById(@Param("id") id: Long): LocalDateTime?
 }

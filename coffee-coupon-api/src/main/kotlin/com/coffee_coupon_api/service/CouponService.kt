@@ -54,7 +54,7 @@ class CouponService(
         val campaign = couponCampaignRepository.findById(couponCampaignId)
             .orElseThrow { CouponNotFoundException(couponCampaignId) }
         val template = couponTemplateRepository.findById(campaign.couponTemplateId)
-            .orElseThrow { CouponNotFoundException(couponCampaignId) }
+            .orElseThrow { CouponNotFoundException(campaign.couponTemplateId) }
         return campaign to template
     }
 }
