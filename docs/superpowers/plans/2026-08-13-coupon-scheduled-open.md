@@ -32,7 +32,7 @@
 
 이 태스크는 기존 코드를 하나도 건드리지 않는 순수 추가라, TDD 사이클 없이 바로 구현 + 리포지토리 테스트로 검증한다(엔티티/리포지토리 자체엔 분기 로직이 없어 "실패하는 테스트"를 먼저 쓸 대상이 없다).
 
-- [ ] **Step 1: `CouponTemplate` 엔티티 생성**
+- [x] **Step 1: `CouponTemplate` 엔티티 생성**
 
 ```kotlin
 package com.coffee_coupon_api.domain
@@ -53,7 +53,7 @@ class CouponTemplate(
 }
 ```
 
-- [ ] **Step 2: `CouponTemplateRepository` 생성**
+- [x] **Step 2: `CouponTemplateRepository` 생성**
 
 ```kotlin
 package com.coffee_coupon_api.repository
@@ -64,7 +64,7 @@ import org.springframework.data.jpa.repository.JpaRepository
 interface CouponTemplateRepository : JpaRepository<CouponTemplate, Long>
 ```
 
-- [ ] **Step 3: 리포지토리 테스트 작성**
+- [x] **Step 3: 리포지토리 테스트 작성**
 
 ```kotlin
 package com.coffee_coupon_api.repository
@@ -95,12 +95,12 @@ class CouponTemplateRepositoryTest {
 }
 ```
 
-- [ ] **Step 4: 테스트 통과 확인**
+- [x] **Step 4: 테스트 통과 확인**
 
 Run: `./gradlew test --tests "com.coffee_coupon_api.repository.CouponTemplateRepositoryTest" --rerun`
 Expected: PASS
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 git add coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/domain/CouponTemplate.kt \
@@ -142,7 +142,7 @@ git commit -m "feat: add CouponTemplate entity and repository"
 
 이 태스크는 **동작을 하나도 안 바꾸는 순수 리네임/구조 분리**다. 새로운 분기 로직이 없어서 TDD 레드-그린 사이클이 자연스럽지 않다 — 대신 "고치고 → 전체 스위트가 그린인지 확인"으로 검증한다. 파일이 많지만 전부 기계적인 개명이라, 하나라도 놓치면 컴파일이 안 돼서 바로 드러난다.
 
-- [ ] **Step 1: `Coupon.kt` 삭제, `CouponCampaign.kt` 생성**
+- [x] **Step 1: `Coupon.kt` 삭제, `CouponCampaign.kt` 생성**
 
 ```bash
 rm coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/domain/Coupon.kt
@@ -172,7 +172,7 @@ class CouponCampaign(
 
 (`openAt`은 이 태스크에서 필드만 추가해둔다 — 실제로 이 값을 읽어서 막는 가드 절은 Task 3에서 추가한다.)
 
-- [ ] **Step 2: `CouponIssue.couponId` → `couponCampaignId` 개명**
+- [x] **Step 2: `CouponIssue.couponId` → `couponCampaignId` 개명**
 
 `coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/domain/CouponIssue.kt` 전체를 다음으로 교체:
 
@@ -203,7 +203,7 @@ class CouponIssue(
 }
 ```
 
-- [ ] **Step 3: `CouponRepository.kt` 삭제, `CouponCampaignRepository.kt` 생성**
+- [x] **Step 3: `CouponRepository.kt` 삭제, `CouponCampaignRepository.kt` 생성**
 
 ```bash
 rm coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/repository/CouponRepository.kt
@@ -228,7 +228,7 @@ interface CouponCampaignRepository : JpaRepository<CouponCampaign, Long> {
 }
 ```
 
-- [ ] **Step 4: `CouponIssueRepository` 메서드 개명**
+- [x] **Step 4: `CouponIssueRepository` 메서드 개명**
 
 ```kotlin
 package com.coffee_coupon_api.repository
@@ -241,7 +241,7 @@ interface CouponIssueRepository : JpaRepository<CouponIssue, Long> {
 }
 ```
 
-- [ ] **Step 5: `CouponService` 배선을 새 리포지토리로 교체**
+- [x] **Step 5: `CouponService` 배선을 새 리포지토리로 교체**
 
 ```kotlin
 package com.coffee_coupon_api.service
@@ -297,7 +297,7 @@ class CouponService(
 
 `getCoupon()`이 `Pair<CouponCampaign, CouponTemplate>`을 리턴하는 이유: 응답에 필요한 `name`(할인 정보)은 이제 `CouponTemplate`에만 있어서, 서비스가 두 리포지토리를 조합해줘야 컨트롤러가 DTO 하나로 매핑할 수 있다.
 
-- [ ] **Step 6: `CouponController`가 새 반환 타입에 맞게 매핑**
+- [x] **Step 6: `CouponController`가 새 반환 타입에 맞게 매핑**
 
 `coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/controller/CouponController.kt`에서 `issue` 메서드 본문의 `CouponIssueResponse` 생성부:
 ```kotlin
@@ -349,7 +349,7 @@ class CouponService(
 ```
 로 변경. (이 파일의 나머지 부분 — `@Tag`, `@Operation`, `@ApiResponses`, import 등 — 은 그대로 둔다.)
 
-- [ ] **Step 7: `CouponRepositoryTest.kt` 삭제, `CouponCampaignRepositoryTest.kt` 생성**
+- [x] **Step 7: `CouponRepositoryTest.kt` 삭제, `CouponCampaignRepositoryTest.kt` 생성**
 
 ```bash
 rm coffee-coupon-api/src/test/kotlin/com/coffee_coupon_api/repository/CouponRepositoryTest.kt
@@ -393,7 +393,7 @@ class CouponCampaignRepositoryTest {
 }
 ```
 
-- [ ] **Step 8: `CouponIssueRepositoryTest` 개명 반영**
+- [x] **Step 8: `CouponIssueRepositoryTest` 개명 반영**
 
 ```kotlin
 package com.coffee_coupon_api.repository
@@ -434,7 +434,7 @@ class CouponIssueRepositoryTest {
 }
 ```
 
-- [ ] **Step 9: `CouponServiceTest` 전체를 새 스키마로 개명**
+- [x] **Step 9: `CouponServiceTest` 전체를 새 스키마로 개명**
 
 전체 파일을 다음으로 교체:
 
@@ -544,7 +544,7 @@ class CouponServiceTest {
 }
 ```
 
-- [ ] **Step 10: `CouponServiceConcurrencyTest` 개명 반영**
+- [x] **Step 10: `CouponServiceConcurrencyTest` 개명 반영**
 
 전체 파일을 다음으로 교체:
 
@@ -620,7 +620,7 @@ class CouponServiceConcurrencyTest {
 }
 ```
 
-- [ ] **Step 11: `CouponControllerTest` 개명 반영**
+- [x] **Step 11: `CouponControllerTest` 개명 반영**
 
 전체 파일을 다음으로 교체:
 
@@ -742,12 +742,12 @@ class CouponControllerTest {
 }
 ```
 
-- [ ] **Step 12: 전체 테스트 스위트 실행**
+- [x] **Step 12: 전체 테스트 스위트 실행**
 
 Run: `./gradlew test --rerun`
 Expected: 전체 PASS. (Task 1에서 만든 `CouponTemplateRepositoryTest`도 함께 통과해야 한다.)
 
-- [ ] **Step 13: 커밋**
+- [x] **Step 13: 커밋**
 
 ```bash
 git add -A coffee-coupon-api/src
@@ -770,7 +770,7 @@ git commit -m "refactor: split Coupon into CouponTemplate and CouponCampaign"
 
 **참고 — Spring 빈 주입과 Kotlin 기본값의 차이:** `clock: Clock = Clock.systemDefaultZone()`는 순수 Kotlin 코드에서 인자를 생략하고 호출할 때만 적용되는 기본값이다. Spring이 리플렉션으로 생성자를 호출해 빈을 만들 때는 기본값을 인식하지 못하고 `Clock` 타입 빈을 컨텍스트에서 찾으려 하는데, 기본 Spring Boot는 `Clock` 빈을 자동 등록하지 않는다. 그래서 `ClockConfig`로 `Clock` 빈을 직접 등록해야 `@SpringBootTest`(`CouponServiceConcurrencyTest`, `CouponControllerTest`)와 실제 앱 구동이 깨지지 않는다. `CouponServiceTest`(Mockito, `CouponService(...)`를 직접 `new`)는 순수 Kotlin 호출이라 이 빈 없이도 기본값이 그대로 적용된다.
 
-- [ ] **Step 1: `CouponNotYetOpenException` 추가 (스캐폴딩)**
+- [x] **Step 1: `CouponNotYetOpenException` 추가 (스캐폴딩)**
 
 `coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/exception/CouponExceptions.kt` 전체를 다음으로 교체:
 
@@ -790,7 +790,7 @@ class CouponNotYetOpenException(couponId: Long, openAt: LocalDateTime) :
     RuntimeException("Coupon $couponId not yet open. Opens at $openAt")
 ```
 
-- [ ] **Step 2: `CouponServiceTest`에 실패하는 테스트 작성**
+- [x] **Step 2: `CouponServiceTest`에 실패하는 테스트 작성**
 
 `coffee-coupon-api/src/test/kotlin/com/coffee_coupon_api/service/CouponServiceTest.kt`의 import 블록에 아래 4줄 추가:
 
@@ -820,12 +820,12 @@ import java.time.ZoneId
     }
 ```
 
-- [ ] **Step 3: 새 테스트만 실패하는지 확인**
+- [x] **Step 3: 새 테스트만 실패하는지 확인**
 
 Run: `./gradlew test --tests "com.coffee_coupon_api.service.CouponServiceTest" --rerun`
 Expected: 컴파일은 되지만(예외 클래스는 Step 1에서 이미 생성) `오픈 시각 이전에 발급 요청하면...` 테스트가 FAIL — `CouponService`가 아직 이 시나리오에서 `couponCampaignRepository.findByIdForUpdate(1L)`을 호출하려다 스텁이 없어 `CouponNotFoundException`을 던지므로, `assertThrows(CouponNotYetOpenException::class.java)`가 다른 예외를 잡아 실패한다.
 
-- [ ] **Step 4: `CouponService`에 `Clock` 주입 + 오픈 전 가드 절 구현**
+- [x] **Step 4: `CouponService`에 `Clock` 주입 + 오픈 전 가드 절 구현**
 
 `coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/service/CouponService.kt` 전체를 다음으로 교체:
 
@@ -894,7 +894,7 @@ class CouponService(
 
 **주의: `findOpenAtById`는 엔티티가 아닌 `openAt` 컬럼만 읽는 스칼라 프로젝션이어야 한다.** 처음에는 `couponCampaignRepository.findById(couponCampaignId)`로 `CouponCampaign` 엔티티를 미리 읽는 안을 구현했으나, 같은 트랜잭션 안에서 엔티티를 한 번 영속성 컨텍스트에 올린 뒤 바로 아래에서 `findByIdForUpdate`로 다시 조회하면 SQL은 `SELECT ... FOR UPDATE`로 다시 나가지만 Hibernate가 1차 캐시(identity map)에 이미 올라온 같은 인스턴스를 그대로 반환해버려 비관적 락이 조용히 무력화되는 문제가 있었다. Task 5의 동시성 테스트에서 기대한 "30개 동시 요청 → 1명만 성공"이 아니라 "10명 성공"으로 재현되어 발견했고, 이후 `findById`를 `findOpenAtById` 스칼라 프로젝션으로 교체해 해결했다.
 
-- [ ] **Step 5: `Clock` 빈 등록**
+- [x] **Step 5: `Clock` 빈 등록**
 
 `coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/config/ClockConfig.kt` 새로 생성:
 
@@ -913,12 +913,12 @@ class ClockConfig {
 }
 ```
 
-- [ ] **Step 6: 새 테스트는 통과, 나머지 4개는 왜 깨지는지 확인**
+- [x] **Step 6: 새 테스트는 통과, 나머지 4개는 왜 깨지는지 확인**
 
 Run: `./gradlew test --tests "com.coffee_coupon_api.service.CouponServiceTest" --rerun`
 Expected: `오픈 시각 이전에 발급 요청하면...`은 PASS. 하지만 `발급 가능한 쿠폰은 정상적으로 발급된다`, `이미 발급받은 사용자는 DuplicateIssueException이 발생한다`, `재고가 소진되면 CouponSoldOutException이 발생한다` 3개는 FAIL — `couponCampaignRepository.findByIdForUpdate(1L)`만 스텁해뒀는데 `issue()`가 이제 그 앞에서 `couponCampaignRepository.findById(1L)`을 먼저 호출하기 때문이다(스텁 없는 목은 `Optional.empty()`를 반환 → `CouponNotFoundException`이 먼저 터짐). 예상된 실패다.
 
-- [ ] **Step 7: 기존 3개 테스트에 `findById` 스텁 추가**
+- [x] **Step 7: 기존 3개 테스트에 `findById` 스텁 추가**
 
 `발급 가능한 쿠폰은 정상적으로 발급된다`에서:
 ```kotlin
@@ -961,17 +961,17 @@ Expected: `오픈 시각 이전에 발급 요청하면...`은 PASS. 하지만 `�
 
 (`존재하지 않는 쿠폰이면 CouponNotFoundException이 발생한다`, `getCoupon` 관련 2개 테스트는 변경 불필요.)
 
-- [ ] **Step 8: `CouponServiceTest` 전체 통과 확인**
+- [x] **Step 8: `CouponServiceTest` 전체 통과 확인**
 
 Run: `./gradlew test --tests "com.coffee_coupon_api.service.CouponServiceTest" --rerun`
 Expected: 8개 테스트(기존 7개 + 신규 1개) 전부 PASS
 
-- [ ] **Step 9: 전체 스위트로 `@SpringBootTest` 컨텍스트가 여전히 뜨는지 확인**
+- [x] **Step 9: 전체 스위트로 `@SpringBootTest` 컨텍스트가 여전히 뜨는지 확인**
 
 Run: `./gradlew test --rerun`
 Expected: 전체 PASS. 특히 `CouponServiceConcurrencyTest`, `CouponControllerTest`가 `Clock` 빈 없이 컨텍스트 로딩에 실패하지 않는지 확인하는 게 이 스텝의 핵심이다.
 
-- [ ] **Step 10: 커밋**
+- [x] **Step 10: 커밋**
 
 ```bash
 git add coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/exception/CouponExceptions.kt \
@@ -993,7 +993,7 @@ git commit -m "feat: reject coupon issue requests before openAt"
 - Consumes: `CouponNotYetOpenException(couponId: Long, openAt: LocalDateTime)` (Task 3)
 - Produces: `GlobalExceptionHandler.handleNotYetOpen(ex: CouponNotYetOpenException): ResponseEntity<ErrorResponse>` — Task 5의 컨트롤러 테스트가 HTTP 계층에서 이 매핑을 검증함
 
-- [ ] **Step 1: 실패하는 테스트 작성**
+- [x] **Step 1: 실패하는 테스트 작성**
 
 `coffee-coupon-api/src/test/kotlin/com/coffee_coupon_api/exception/GlobalExceptionHandlerTest.kt`의 import 블록에 추가:
 
@@ -1013,12 +1013,12 @@ import java.time.LocalDateTime
     }
 ```
 
-- [ ] **Step 2: 테스트 실패 확인**
+- [x] **Step 2: 테스트 실패 확인**
 
 Run: `./gradlew test --tests "com.coffee_coupon_api.exception.GlobalExceptionHandlerTest" --rerun`
 Expected: FAIL — `handleNotYetOpen`이 아직 `GlobalExceptionHandler`에 없어 컴파일 에러(`unresolved reference`)
 
-- [ ] **Step 3: 핸들러 구현**
+- [x] **Step 3: 핸들러 구현**
 
 `coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/exception/GlobalExceptionHandler.kt` 전체를 다음으로 교체:
 
@@ -1062,12 +1062,12 @@ class GlobalExceptionHandler {
 }
 ```
 
-- [ ] **Step 4: 테스트 통과 확인**
+- [x] **Step 4: 테스트 통과 확인**
 
 Run: `./gradlew test --tests "com.coffee_coupon_api.exception.GlobalExceptionHandlerTest" --rerun`
 Expected: 5개 테스트(기존 4개 + 신규 1개) 전부 PASS
 
-- [ ] **Step 5: 커밋**
+- [x] **Step 5: 커밋**
 
 ```bash
 git add coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/exception/GlobalExceptionHandler.kt \
@@ -1086,7 +1086,7 @@ git commit -m "feat: map CouponNotYetOpenException to HTTP 403"
 **Interfaces:**
 - Consumes: `CouponCampaign(..., openAt: LocalDateTime)`, `GlobalExceptionHandler.handleNotYetOpen` (Task 4, 컨트롤러를 통해 간접 검증)
 
-- [ ] **Step 1: 컨트롤러 레벨에서 403 케이스 실패하는 테스트 작성**
+- [x] **Step 1: 컨트롤러 레벨에서 403 케이스 실패하는 테스트 작성**
 
 `CouponControllerTest.kt`의 import 블록에 추가:
 
@@ -1119,12 +1119,12 @@ import java.time.LocalDateTime
     }
 ```
 
-- [ ] **Step 2: 테스트 통과 확인**
+- [x] **Step 2: 테스트 통과 확인**
 
 Run: `./gradlew test --tests "com.coffee_coupon_api.controller.CouponControllerTest" --rerun`
 Expected: 전체 PASS (기존 6개 + 신규 1개 = 7개), 첫 실행부터 바로 PASS해야 한다. 오픈 전 가드 절(Task 3)과 403 매핑(Task 4)이 이미 구현돼 있어서, 이 테스트는 새 로직을 만들기 위한 레드-그린 사이클이 아니라 **컨트롤러 → 서비스 → 예외 핸들러 전체 스택이 실제로 연결돼 있는지 확인하는 회귀 테스트**다. 만약 FAIL한다면 Task 3~4의 배선이 어딘가 빠진 것이니 그쪽을 먼저 점검한다.
 
-- [ ] **Step 3: 동시성 테스트에 `openAt`을 명시적으로 과거 시각으로 설정**
+- [x] **Step 3: 동시성 테스트에 `openAt`을 명시적으로 과거 시각으로 설정**
 
 `CouponServiceConcurrencyTest.kt`의 import 블록에 추가:
 
@@ -1152,21 +1152,21 @@ import java.time.LocalDateTime
 
 (`Coupon.openAt`의 기본값이 `LocalDateTime.now()`라 이 변경 없이도 이미 통과하지만, "이 테스트는 이미 오픈된 캠페인을 가정한다"는 의도를 코드에 명시적으로 남겨서 나중에 기본값이 바뀌거나 이 테스트만 따로 읽는 사람이 오해하지 않게 한다.)
 
-- [ ] **Step 4: 동시성 테스트 통과 확인**
+- [x] **Step 4: 동시성 테스트 통과 확인**
 
 Run: `./gradlew test --tests "com.coffee_coupon_api.service.CouponServiceConcurrencyTest" --rerun`
 Expected: PASS — `성공=1, 실패=29, 최종 issuedQuantity=1`
 
-- [ ] **Step 5: 전체 테스트 스위트 최종 실행**
+- [x] **Step 5: 전체 테스트 스위트 최종 실행**
 
 Run: `./gradlew test --rerun`
 Expected: 전체 PASS (Task 1~5에서 만든 모든 테스트 포함)
 
-- [ ] **Step 6: 쿼리 로그로 오픈 전 요청이 락을 안 거는지 확인 (선택, 수동 검증)**
+- [x] **Step 6: 쿼리 로그로 오픈 전 요청이 락을 안 거는지 확인 (선택, 수동 검증)**
 
 Run: `./gradlew bootRun` 후 `openAt`을 미래로 설정한 캠페인에 `POST /api/coupons/{id}/issue` 요청 → 콘솔에 `for update`가 안 찍히고 `select` 한 번만 나가는지 확인. (자동화된 테스트로 검증하기엔 쿼리 로그 파싱이 과하므로 수동 확인만 하고 자동 테스트는 추가하지 않는다 — YAGNI)
 
-- [ ] **Step 7: 커밋**
+- [x] **Step 7: 커밋**
 
 ```bash
 git add coffee-coupon-api/src/test/kotlin/com/coffee_coupon_api/controller/CouponControllerTest.kt \
