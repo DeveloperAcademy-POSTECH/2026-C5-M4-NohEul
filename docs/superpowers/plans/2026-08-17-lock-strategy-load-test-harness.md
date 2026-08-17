@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 비관적/낙관적/분산 락 세 전략을 동일한 기준(peak 6,000 QPS, 재고 2,000장)으로 반복 검증할 수 있는 k6 기반 부하테스트 하네스(seed.sql + coupon-issue-scale.js + verify.sh + README.md)를 만든다.
+**Goal:** 락 없음(대조군)/비관적/낙관적/분산 락 네 가지를 동일한 기준(peak 6,000 QPS, 재고 2,000장)으로 반복 검증할 수 있는 k6 기반 부하테스트 하네스(seed.sql + coupon-issue-scale.js + verify.sh + README.md)를 만든다.
 
 **Architecture:** Kotlin 소스 트리와 분리된 `coffee-coupon-api/load-test/` 디렉토리에 4개 파일을 만든다. SQL로 캠페인을 직접 시딩(생성 API가 없으므로) → k6로 6,000 req/s × 10초 부하를 실제 실행 중인 API에 발사 → 최종 재고를 조회해 과발급 여부를 검증하는 3단계 파이프라인이다. 자동화된 CI 게이트가 아니라 사람이 브랜치별로 따라 실행하는 러너북이다.
 
@@ -18,6 +18,8 @@
 - `CouponIssue`에는 `(coupon_campaign_id, user_id)` 유니크 제약이 있다. k6 스크립트는 `exec.scenario.iterationInTest`로 전역 유일한 `userId`를 생성해야 한다(같은 userId 중복 시 "재고 소진"이 아니라 "중복 발급"으로 판정이 오염됨).
 - DB 접속 정보(사용자/비밀번호)는 **어떤 커밋 파일에도 하드코딩하지 않는다** — README에서 환경변수나 CLI 인자로 넘기도록 안내한다(이 프로젝트가 `application-local.yaml`을 gitignore로 뺀 것과 같은 이유).
 - 시딩되는 캠페인은 `total_quantity=2000`, `open_at`은 항상 과거 시각(예: `NOW() - INTERVAL 1분`)으로 고정한다 — 오픈 시각 게이팅 자체의 재현은 이 하네스의 범위 밖이다.
+- 비교 대상은 **락 없음(대조군) → 비관적 락 → 낙관적 락 → 분산 락** 네 가지다. 각 전략은 **자기 브랜치에서 별도 엔드포인트**(`/api/coupons/{campaignId}/issue-no-lock`, `-pessimistic`, `-optimistic`, `-distributed`)로 구현되고, 브랜치가 순차적으로 develop에 머지되므로(구현→머지 반복) 엔드포인트가 누적된다. 기존에 이미 병합된 비관적 락은 접미사 없는 `/issue`를 그대로 쓰고 있어서, `/issue-pessimistic`으로 이름을 맞추고 `/issue-no-lock`을 새로 추가하는 작업이 선행되어야 한다 — **이 작업은 이 계획의 범위 밖**이다(낙관적/분산 락 엔드포인트 추가와 마찬가지로 별도 브랜치/작업). 이 계획은 어떤 시점에 몇 개의 엔드포인트가 존재하든 재사용할 수 있는 하네스만 만든다.
+- k6 스크립트는 `STRATEGY` 환경변수(`no-lock`/`pessimistic`/`optimistic`/`distributed`)를 받아 `/api/coupons/{campaignId}/issue-${STRATEGY}`를 호출해야 한다.
 - 파일 위치는 전부 `coffee-coupon-api/load-test/` 아래.
 
 ---
@@ -90,7 +92,7 @@ git commit -m "feat: add campaign seed script for lock-strategy load test"
 - Create: `coffee-coupon-api/load-test/coupon-issue-scale.js`
 
 **Interfaces:**
-- Consumes: Task 1이 만든 `campaign_id`(환경변수 `CAMPAIGN_ID`로 전달받음), `POST /api/coupons/{campaignId}/issue`(body: `{ "userId": Long }`, 성공 200/오픈전 403/소진·중복 409를 반환하는 기존 `CouponController`)
+- Consumes: Task 1이 만든 `campaign_id`(환경변수 `CAMPAIGN_ID`로 전달받음), 환경변수 `STRATEGY`(`no-lock`/`pessimistic`/`optimistic`/`distributed` 중 하나), `POST /api/coupons/{campaignId}/issue-{STRATEGY}`(body: `{ "userId": Long }`, 성공 200/오픈전 403/소진·중복 409를 반환). 이 네 엔드포인트는 각 락 전략 브랜치가 순차적으로 추가하는 것으로, 이 태스크 시점엔 아직 하나도 존재하지 않을 수 있다(Global Constraints 참고).
 - Produces: 실행 시 k6 표준 요약(상태코드별 카운트, 처리량, 지연시간)을 stdout에 출력. Task 3(`verify.sh`)은 이 스크립트가 만든 발급 결과를 API로 재조회해서 검증한다(직접적인 파일/함수 의존은 없음).
 
 - [ ] **Step 1: `coupon-issue-scale.js` 작성**
@@ -102,13 +104,18 @@ import exec from 'k6/execution';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const CAMPAIGN_ID = __ENV.CAMPAIGN_ID;
+const STRATEGY = __ENV.STRATEGY;
+const VALID_STRATEGIES = ['no-lock', 'pessimistic', 'optimistic', 'distributed'];
 const RATE = Number(__ENV.RATE || 6000);
 const DURATION = __ENV.DURATION || '10s';
 const PRE_ALLOCATED_VUS = Number(__ENV.PRE_ALLOCATED_VUS || 2000);
 const MAX_VUS = Number(__ENV.MAX_VUS || 8000);
 
 if (!CAMPAIGN_ID) {
-  throw new Error('CAMPAIGN_ID env var is required. Usage: k6 run -e CAMPAIGN_ID=42 coupon-issue-scale.js');
+  throw new Error('CAMPAIGN_ID env var is required. Usage: k6 run -e CAMPAIGN_ID=42 -e STRATEGY=pessimistic coupon-issue-scale.js');
+}
+if (!VALID_STRATEGIES.includes(STRATEGY)) {
+  throw new Error(`STRATEGY env var must be one of ${VALID_STRATEGIES.join(', ')}, got: ${STRATEGY}`);
 }
 
 export const options = {
@@ -126,7 +133,7 @@ export const options = {
 
 export default function () {
   const userId = exec.scenario.iterationInTest;
-  const url = `${BASE_URL}/api/coupons/${CAMPAIGN_ID}/issue`;
+  const url = `${BASE_URL}/api/coupons/${CAMPAIGN_ID}/issue-${STRATEGY}`;
   const payload = JSON.stringify({ userId });
   const params = { headers: { 'Content-Type': 'application/json' } };
 
@@ -142,14 +149,18 @@ export default function () {
 
 Run:
 ```bash
-k6 run -e CAMPAIGN_ID=1 -e RATE=10 -e DURATION=2s -e PRE_ALLOCATED_VUS=10 -e MAX_VUS=20 coffee-coupon-api/load-test/coupon-issue-scale.js
+k6 run -e CAMPAIGN_ID=1 -e STRATEGY=pessimistic -e RATE=10 -e DURATION=2s -e PRE_ALLOCATED_VUS=10 -e MAX_VUS=20 coffee-coupon-api/load-test/coupon-issue-scale.js
 ```
 
 Expected: 앱이 안 떠 있어서 모든 요청이 `connection refused`로 실패하고 `checks_failed: 100%`가 뜨지만, k6 자체는 파싱/런타임 에러 없이 "iterations: 20" 근처(10 req/s × 2s)로 완주해야 한다. 여기서 확인하려는 건 스크립트 문법이지 실제 응답이 아니다.
 
-- [ ] **Step 3: 실제 앱 대상으로 소규모 드라이런**
+`STRATEGY`를 빼고 실행하면(`k6 run -e CAMPAIGN_ID=1 ... coupon-issue-scale.js`) `STRATEGY env var must be one of ...` 에러로 바로 죽는지도 확인한다.
 
-별도 터미널에서 앱을 기동한다(이 스텝은 별 창에서 실행 후 유지):
+- [ ] **Step 3: 실제 앱 대상으로 소규모 드라이런 (엔드포인트 준비 여부에 따라 다름)**
+
+이 하네스가 가정하는 `/issue-<전략>` 엔드포인트들은 각 락 전략 브랜치가 별도로 추가하는 것이라, **지금(이 브랜치 기준)은 아직 하나도 존재하지 않을 수 있다.** 이미 `/issue-pessimistic`(또는 과거 이름인 `/issue`)이 존재하는 브랜치가 있다면 그걸 체크아웃해서 드라이런하고, 아직 하나도 없다면 이 스텝은 건너뛰고 Step 2의 스모크 테스트로 충분한 것으로 간주한다(엔드포인트가 생기는 대로 나중에 재검증).
+
+별도 터미널에서 엔드포인트가 있는 브랜치의 앱을 기동한다(이 스텝은 별 창에서 실행 후 유지):
 ```bash
 cd coffee-coupon-api && ./gradlew bootRun
 ```
@@ -160,12 +171,12 @@ cd coffee-coupon-api
 MYSQL_PWD='<local.yaml의 password>' mysql -h 127.0.0.1 -u root -D coffee_coupon < load-test/seed.sql
 ```
 
-출력된 `campaign_id` 값(예: `3`)을 아래 명령에 넣어 소규모로 실행한다:
+출력된 `campaign_id` 값(예: `3`)과, 그 브랜치에 실제로 존재하는 전략 이름을 넣어 소규모로 실행한다:
 ```bash
-k6 run -e CAMPAIGN_ID=3 -e RATE=10 -e DURATION=2s -e PRE_ALLOCATED_VUS=10 -e MAX_VUS=20 coffee-coupon-api/load-test/coupon-issue-scale.js
+k6 run -e CAMPAIGN_ID=3 -e STRATEGY=pessimistic -e RATE=10 -e DURATION=2s -e PRE_ALLOCATED_VUS=10 -e MAX_VUS=20 coffee-coupon-api/load-test/coupon-issue-scale.js
 ```
 
-Expected: `checks_succeeded: 100%`, `http_reqs`가 약 20건, 상태코드가 전부 200(비관적 락 브랜치라면 재고 2,000장에 20건뿐이라 전부 성공해야 정상)이다.
+Expected: `checks_succeeded: 100%`, `http_reqs`가 약 20건, 상태코드가 전부 200(재고 2,000장에 20건뿐이라 전부 성공해야 정상)이다.
 
 - [ ] **Step 4: 커밋**
 
@@ -282,9 +293,13 @@ git commit -m "feat: add result verification script for lock-strategy load test"
 ```markdown
 # 락 전략 비교 부하테스트 하네스
 
-비관적/낙관적/분산 락 세 전략이 가정한 트래픽(peak 6,000 QPS, 재고 2,000장, 10초 몰림)에서
-과발급 없이 동작하는지 동일한 기준으로 검증하는 도구 세트입니다.
+락 없음(대조군)/비관적/낙관적/분산 락 네 가지가 가정한 트래픽(peak 6,000 QPS, 재고 2,000장, 10초 몰림)에서
+과발급 없이 동작하는지(또는 얼마나 과발급되는지) 동일한 기준으로 검증하는 도구 세트입니다.
 설계 배경은 `docs/superpowers/specs/2026-08-17-lock-strategy-load-test-harness-design.md` 참고.
+
+### 왜 6,000 QPS인가
+
+알림 대상 30만 명 · 재고 2,000장 · 실제 시도율 20%(6만 명) · 오픈 직후 몰림 10초를 가정해서 역산한 값입니다. 근거는 위 스펙 문서 참고.
 
 ## 사전 준비
 
@@ -292,63 +307,68 @@ git commit -m "feat: add result verification script for lock-strategy load test"
 - jq (`brew install jq`)
 - mysql CLI
 - 로컬 MySQL이 떠 있고 `coffee-coupon-api/src/main/resources/application-local.yaml`이 설정돼 있을 것 (README 루트의 설정 방법 참고)
+- 네 전략이 `/api/coupons/{campaignId}/issue-<전략>` 형태의 별도 엔드포인트(`issue-no-lock`/`issue-pessimistic`/`issue-optimistic`/`issue-distributed`)로 앱에 존재해야 한다. 각 전략은 자기 브랜치에서 구현되지만 브랜치가 순차적으로 develop에 머지되므로(구현→머지 반복), 가장 최근에 머지된 브랜치에는 그때까지의 엔드포인트가 전부 함께 있다.
 
 ## 전략 하나를 검증하는 순서
 
-1. 검증할 락 전략 브랜치를 체크아웃한다.
-   ```bash
-   git checkout feature/coupon-issue-pessimistic-lock   # 또는 optimistic-lock, distributed-lock 브랜치
-   ```
-2. 앱을 기동한다 (별도 터미널, 계속 띄워둠).
+브랜치를 오갈 필요 없이, **엔드포인트가 다 모여 있는 브랜치 하나에서 앱을 한 번만 띄워두고** 전략(엔드포인트)만 바꿔가며 반복하면 된다.
+
+1. 앱을 기동한다 (별도 터미널, 계속 띄워둠).
    ```bash
    cd coffee-coupon-api
    ./gradlew bootRun
    ```
-3. 캠페인을 시딩하고 `campaign_id`를 확보한다.
+2. 검증할 전략을 고른다. **`no-lock`(대조군)부터 먼저 하는 걸 권장** — 락이 없을 때 실제로 얼마나 과발급되는지 먼저 확인해두면 나머지 세 전략의 결과를 해석할 기준이 생긴다.
+   ```bash
+   STRATEGY=no-lock   # 이후 pessimistic → optimistic → distributed 순으로 반복
+   ```
+3. 캠페인을 새로 시딩하고 `campaign_id`를 확보한다. **전략마다 매번 새로 시딩한다** — 이전 전략이 다 써버린 캠페인을 재사용하면 안 된다.
    ```bash
    MYSQL_PWD='<local.yaml의 password>' mysql -h 127.0.0.1 -u root -D coffee_coupon < load-test/seed.sql
    ```
 4. 부하를 발사한다 (기본값 6,000 req/s × 10초 = 총 60,000건).
    ```bash
-   k6 run -e CAMPAIGN_ID=<3단계에서 나온 값> coffee-coupon-api/load-test/coupon-issue-scale.js
+   k6 run -e CAMPAIGN_ID=<3단계에서 나온 값> -e STRATEGY=$STRATEGY coffee-coupon-api/load-test/coupon-issue-scale.js
    ```
    작게 먼저 확인하고 싶으면 `-e RATE=10 -e DURATION=2s -e PRE_ALLOCATED_VUS=10 -e MAX_VUS=20`으로 축소해서 실행.
 5. 결과를 검증한다.
    ```bash
    coffee-coupon-api/load-test/verify.sh <campaign_id>
    ```
-6. 아래 표 형식으로 결과를 기록한다. 성공/실패 카운트는 k6 요약의 상태코드 분포(`http_req_duration` 옆 status 브레이크다운, 또는 `-e`로 태그를 남겨 `k6 run --summary-export`)에서 확인한다. **5xx(커넥션 타임아웃 등 인프라 오류)는 403/409(락 로직에 의한 정상 거부)와 반드시 분리해서 별도 칸에 적는다** — 섞으면 "락이 막은 것"과 "인프라가 못 버틴 것"을 구분할 수 없다.
+6. 2~5번을 `STRATEGY`만 바꿔서 반복한다 (no-lock → pessimistic → optimistic → distributed). 아래 표 형식으로 결과를 기록한다. 성공/실패 카운트는 k6 요약의 상태코드 분포에서 확인한다. **5xx(커넥션 타임아웃 등 인프라 오류)는 403/409(락 로직에 의한 정상 거부)와 반드시 분리해서 별도 칸에 적는다** — 섞으면 "락이 막은 것"과 "인프라가 못 버틴 것"을 구분할 수 없다.
 
 | 락 전략 | 성공(200) | 락에 의한 실패(403/409) | 인프라 오류(5xx/dropped) | 최종 issuedQuantity | 과발급 | 비고(처리량/p95 등) |
 |---|---|---|---|---|---|---|
+| **락 없음 (대조군)** | | | | | | |
 | 비관적 락 | | | | | | |
 | 낙관적 락 | | | | | | |
 | 분산 락 | | | | | | |
 
 ## 결과 해석 시 주의
 
-- **DB 커넥션 풀**: `application-local.yaml`의 Hikari 풀 크기가 세 전략 모두에 동일하게 적용되는 조건이다. 실측 처리량이 6,000 req/s에 못 미쳐도 그게 "락 자체의 한계"인지 "커넥션 풀 크기의 한계"인지는 이 표만으로는 구분 안 된다. 절대 수치보다 **세 전략 간 상대 비교**에 집중한다.
+- **DB 커넥션 풀**: `application-local.yaml`의 Hikari 풀 크기가 네 가지 모두에 동일하게 적용되는 조건이다. 실측 처리량이 6,000 req/s에 못 미쳐도 그게 "락 자체의 한계"인지 "커넥션 풀 크기의 한계"인지는 이 표만으로는 구분 안 된다. 절대 수치보다 **네 가지 간 상대 비교**에 집중한다.
 - **낙관적 락의 언더셀**: 재시도 로직 없이 구현했다면 `issuedQuantity`가 2,000에 못 미치는 채로 끝날 수 있다. 이건 과발급이 아니라 낙관적 락의 특성이므로 "과발급" 칸에는 "없음"으로 적고, 비고에 언더셀 수치를 남긴다.
 
 ## 문제 해결
 
 - `verify.sh`가 `FAIL: totalQuantity(...) != expected(2000)`을 내면 `seed.sql`이 제대로 안 돌았거나 다른 campaign_id를 잘못 넣은 것이다.
 - k6가 `dropped_iterations`를 많이 보고하면 `MAX_VUS`가 부족해서 목표 QPS를 못 낸 것이다 — 이 자체도 그 락 전략이 해당 QPS를 못 버틴다는 신호이니 위 표의 "인프라 오류" 칸에 기록한다.
+- k6 요약에 404가 대량으로 찍히면 `STRATEGY` 값에 오타가 있거나(`no-lock`/`pessimistic`/`optimistic`/`distributed` 중 하나여야 함), 그 전략의 엔드포인트를 추가한 브랜치가 아직 지금 체크아웃한 브랜치에 안 들어와 있는 것이다.
 ```
 
 - [ ] **Step 2: README에 적힌 순서를 처음부터 끝까지 그대로 따라가며 전체 파이프라인 재검증**
 
-Task 2~3에서 띄워둔 앱을 재사용해서(또는 새로 기동), README의 3~5단계를 그대로 실행한다:
+Task 2~3에서 띄워둔 앱을 재사용해서(또는 새로 기동), README의 1~5단계를 그대로 실행한다. 이 브랜치에 아직 `/issue-<전략>` 엔드포인트가 하나도 없다면(Global Constraints 참고), 이 스텝은 Task 2 Step 2의 스모크 테스트로 갈음하고 나중에 엔드포인트가 생긴 뒤 재검증한다.
 
 ```bash
 cd coffee-coupon-api
 MYSQL_PWD='<local.yaml의 password>' mysql -h 127.0.0.1 -u root -D coffee_coupon < load-test/seed.sql
-# 출력된 campaign_id를 아래 두 명령에 채워 넣는다
-k6 run -e CAMPAIGN_ID=<id> -e RATE=50 -e DURATION=3s -e PRE_ALLOCATED_VUS=30 -e MAX_VUS=60 load-test/coupon-issue-scale.js
+# 출력된 campaign_id를 아래 두 명령에 채워 넣는다 (STRATEGY는 실제 브랜치에 존재하는 전략으로)
+k6 run -e CAMPAIGN_ID=<id> -e STRATEGY=pessimistic -e RATE=50 -e DURATION=3s -e PRE_ALLOCATED_VUS=30 -e MAX_VUS=60 load-test/coupon-issue-scale.js
 load-test/verify.sh <id>
 ```
 
-Expected: k6 요약에 `checks_succeeded: 100%`, `verify.sh`가 `PASS`를 출력한다(재고 2,000장에 150건 정도만 시도하므로 전부 200이어야 정상 — 비관적 락 브랜치 기준).
+Expected: k6 요약에 `checks_succeeded: 100%`, `verify.sh`가 `PASS`를 출력한다(재고 2,000장에 150건 정도만 시도하므로 전부 200이어야 정상).
 
 - [ ] **Step 3: 테스트로 만든 캠페인 정리, 앱 종료**
 
@@ -388,7 +408,7 @@ git push -u origin feature/lock-strategy-load-test
 ```bash
 gh pr create --title "feat: 락 전략 비교용 k6 부하테스트 하네스" --body "$(cat <<'EOF'
 ## Summary
-- 비관적/낙관적/분산 락 세 전략을 peak 6,000 QPS(재고 2,000장, 10초 몰림) 가정으로 동일하게 검증할 수 있는 k6 하네스 추가
+- 락 없음(대조군)/비관적/낙관적/분산 락 네 가지를 peak 6,000 QPS(재고 2,000장, 10초 몰림) 가정으로 동일하게 검증할 수 있는 k6 하네스 추가
 - 스펙: docs/superpowers/specs/2026-08-17-lock-strategy-load-test-harness-design.md
 
 ## Test plan
