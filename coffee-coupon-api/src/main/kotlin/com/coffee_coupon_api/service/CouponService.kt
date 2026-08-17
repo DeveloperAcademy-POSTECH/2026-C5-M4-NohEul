@@ -24,7 +24,7 @@ class CouponService(
 ) {
 
     @Transactional
-    fun issue(couponCampaignId: Long, userId: Long): CouponIssue {
+    fun issuePessimistic(couponCampaignId: Long, userId: Long): CouponIssue {
         val openAt = couponCampaignRepository.findOpenAtById(couponCampaignId)
             ?: throw CouponNotFoundException(couponCampaignId)
 
@@ -35,6 +35,22 @@ class CouponService(
         val campaign = couponCampaignRepository.findByIdForUpdate(couponCampaignId)
             .orElseThrow { CouponNotFoundException(couponCampaignId) }
 
+        return completeIssue(campaign, couponCampaignId, userId)
+    }
+
+    @Transactional
+    fun issueNoLock(couponCampaignId: Long, userId: Long): CouponIssue {
+        val campaign = couponCampaignRepository.findById(couponCampaignId)
+            .orElseThrow { CouponNotFoundException(couponCampaignId) }
+
+        if (LocalDateTime.now(clock).isBefore(campaign.openAt)) {
+            throw CouponNotYetOpenException(couponCampaignId, campaign.openAt)
+        }
+
+        return completeIssue(campaign, couponCampaignId, userId)
+    }
+
+    private fun completeIssue(campaign: CouponCampaign, couponCampaignId: Long, userId: Long): CouponIssue {
         if (couponIssueRepository.existsByCouponCampaignIdAndUserId(couponCampaignId, userId)) {
             throw DuplicateIssueException(couponCampaignId, userId)
         }

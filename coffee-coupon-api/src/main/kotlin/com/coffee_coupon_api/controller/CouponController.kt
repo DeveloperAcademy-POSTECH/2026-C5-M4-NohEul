@@ -26,7 +26,10 @@ class CouponController(
     private val couponService: CouponService,
 ) {
 
-    @Operation(summary = "쿠폰 발급", description = "지정한 쿠폰을 사용자에게 발급한다. 동일 사용자가 같은 쿠폰을 중복 발급받을 수 없다.")
+    @Operation(
+        summary = "쿠폰 발급 (비관적 락)",
+        description = "지정한 쿠폰을 사용자에게 발급한다. `SELECT ... FOR UPDATE`로 캠페인 행에 락을 걸어 동시 요청에도 재고를 초과 발급하지 않는다.",
+    )
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "발급 성공"),
         ApiResponse(
@@ -45,12 +48,48 @@ class CouponController(
             content = [Content(schema = Schema(implementation = ErrorResponse::class))],
         ),
     )
-    @PostMapping("/{couponId}/issue")
-    fun issue(
+    @PostMapping("/{couponId}/issue-pessimistic")
+    fun issuePessimistic(
         @Parameter(description = "발급할 쿠폰 ID") @PathVariable couponId: Long,
         @RequestBody request: CouponIssueRequest,
     ): CouponIssueResponse {
-        val issue = couponService.issue(couponId, request.userId)
+        val issue = couponService.issuePessimistic(couponId, request.userId)
+        return CouponIssueResponse(
+            couponId = issue.couponCampaignId,
+            userId = issue.userId,
+            issuedAt = issue.issuedAt,
+        )
+    }
+
+    @Operation(
+        summary = "쿠폰 발급 (락 없음, 대조군)",
+        description = "지정한 쿠폰을 사용자에게 발급한다. 동시성 제어를 전혀 하지 않아, 동시 요청 시 재고를 초과해서 발급될 수 있다 " +
+            "— 락 전략 비교의 대조군으로 의도적으로 남겨둔 엔드포인트다.",
+    )
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "발급 성공"),
+        ApiResponse(
+            responseCode = "403",
+            description = "아직 오픈되지 않은 쿠폰(COUPON_NOT_YET_OPEN)",
+            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+        ),
+        ApiResponse(
+            responseCode = "404",
+            description = "쿠폰을 찾을 수 없음",
+            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+        ),
+        ApiResponse(
+            responseCode = "409",
+            description = "쿠폰 소진(COUPON_SOLD_OUT) 또는 중복 발급(DUPLICATE_ISSUE)",
+            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+        ),
+    )
+    @PostMapping("/{couponId}/issue-no-lock")
+    fun issueNoLock(
+        @Parameter(description = "발급할 쿠폰 ID") @PathVariable couponId: Long,
+        @RequestBody request: CouponIssueRequest,
+    ): CouponIssueResponse {
+        val issue = couponService.issueNoLock(couponId, request.userId)
         return CouponIssueResponse(
             couponId = issue.couponCampaignId,
             userId = issue.userId,

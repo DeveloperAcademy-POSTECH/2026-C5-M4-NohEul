@@ -38,7 +38,7 @@ class CouponServiceTest {
     }
 
     @Test
-    fun `발급 가능한 쿠폰은 정상적으로 발급된다`() {
+    fun `issuePessimistic - 발급 가능한 쿠폰은 정상적으로 발급된다`() {
         val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 0)
         `when`(couponCampaignRepository.findOpenAtById(1L)).thenReturn(campaign.openAt)
         `when`(couponCampaignRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(campaign))
@@ -47,33 +47,33 @@ class CouponServiceTest {
         val savedIssue = CouponIssue(couponCampaignId = 1L, userId = 100L)
         `when`(couponIssueRepository.save(any(CouponIssue::class.java))).thenReturn(savedIssue)
 
-        val result = couponService.issue(1L, 100L)
+        val result = couponService.issuePessimistic(1L, 100L)
 
         assertEquals(1, campaign.issuedQuantity)
         assertEquals(100L, result.userId)
     }
 
     @Test
-    fun `존재하지 않는 쿠폰이면 CouponNotFoundException이 발생한다`() {
+    fun `issuePessimistic - 존재하지 않는 쿠폰이면 CouponNotFoundException이 발생한다`() {
         `when`(couponCampaignRepository.findOpenAtById(999L)).thenReturn(null)
 
         assertThrows(CouponNotFoundException::class.java) {
-            couponService.issue(999L, 100L)
+            couponService.issuePessimistic(999L, 100L)
         }
     }
 
     @Test
-    fun `오픈 시각 조회 이후 캠페인이 삭제되면 CouponNotFoundException이 발생한다`() {
+    fun `issuePessimistic - 오픈 시각 조회 이후 캠페인이 삭제되면 CouponNotFoundException이 발생한다`() {
         `when`(couponCampaignRepository.findOpenAtById(1L)).thenReturn(LocalDateTime.now().minusMinutes(1))
         `when`(couponCampaignRepository.findByIdForUpdate(1L)).thenReturn(Optional.empty())
 
         assertThrows(CouponNotFoundException::class.java) {
-            couponService.issue(1L, 100L)
+            couponService.issuePessimistic(1L, 100L)
         }
     }
 
     @Test
-    fun `오픈 시각 이전에 발급 요청하면 CouponNotYetOpenException이 발생한다`() {
+    fun `issuePessimistic - 오픈 시각 이전에 발급 요청하면 CouponNotYetOpenException이 발생한다`() {
         val openAt = LocalDateTime.of(2026, 8, 14, 10, 0)
         val threeSecondsBeforeOpen = openAt.minusSeconds(3).atZone(ZoneId.systemDefault()).toInstant()
         val fixedClock = Clock.fixed(threeSecondsBeforeOpen, ZoneId.systemDefault())
@@ -82,12 +82,12 @@ class CouponServiceTest {
         `when`(couponCampaignRepository.findOpenAtById(1L)).thenReturn(openAt)
 
         assertThrows(CouponNotYetOpenException::class.java) {
-            serviceWithFixedClock.issue(1L, 100L)
+            serviceWithFixedClock.issuePessimistic(1L, 100L)
         }
     }
 
     @Test
-    fun `오픈 시각 정각에 발급 요청하면 정상적으로 발급된다`() {
+    fun `issuePessimistic - 오픈 시각 정각에 발급 요청하면 정상적으로 발급된다`() {
         val openAt = LocalDateTime.of(2026, 8, 14, 10, 0)
         val exactlyOpenInstant = openAt.atZone(ZoneId.systemDefault()).toInstant()
         val fixedClock = Clock.fixed(exactlyOpenInstant, ZoneId.systemDefault())
@@ -101,33 +101,94 @@ class CouponServiceTest {
         val savedIssue = CouponIssue(couponCampaignId = 1L, userId = 100L)
         `when`(couponIssueRepository.save(any(CouponIssue::class.java))).thenReturn(savedIssue)
 
-        val result = serviceWithFixedClock.issue(1L, 100L)
+        val result = serviceWithFixedClock.issuePessimistic(1L, 100L)
 
         assertEquals(1, campaign.issuedQuantity)
         assertEquals(100L, result.userId)
     }
 
     @Test
-    fun `이미 발급받은 사용자는 DuplicateIssueException이 발생한다`() {
+    fun `issuePessimistic - 이미 발급받은 사용자는 DuplicateIssueException이 발생한다`() {
         val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 1)
         `when`(couponCampaignRepository.findOpenAtById(1L)).thenReturn(campaign.openAt)
         `when`(couponCampaignRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(campaign))
         `when`(couponIssueRepository.existsByCouponCampaignIdAndUserId(1L, 100L)).thenReturn(true)
 
         assertThrows(DuplicateIssueException::class.java) {
-            couponService.issue(1L, 100L)
+            couponService.issuePessimistic(1L, 100L)
         }
     }
 
     @Test
-    fun `재고가 소진되면 CouponSoldOutException이 발생한다`() {
+    fun `issuePessimistic - 재고가 소진되면 CouponSoldOutException이 발생한다`() {
         val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 1, issuedQuantity = 1)
         `when`(couponCampaignRepository.findOpenAtById(1L)).thenReturn(campaign.openAt)
         `when`(couponCampaignRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(campaign))
         `when`(couponIssueRepository.existsByCouponCampaignIdAndUserId(1L, 100L)).thenReturn(false)
 
         assertThrows(CouponSoldOutException::class.java) {
-            couponService.issue(1L, 100L)
+            couponService.issuePessimistic(1L, 100L)
+        }
+    }
+
+    @Test
+    fun `issueNoLock - 발급 가능한 쿠폰은 정상적으로 발급된다`() {
+        val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 0)
+        `when`(couponCampaignRepository.findById(1L)).thenReturn(Optional.of(campaign))
+        `when`(couponIssueRepository.existsByCouponCampaignIdAndUserId(1L, 100L)).thenReturn(false)
+        `when`(couponCampaignRepository.save(campaign)).thenReturn(campaign)
+        val savedIssue = CouponIssue(couponCampaignId = 1L, userId = 100L)
+        `when`(couponIssueRepository.save(any(CouponIssue::class.java))).thenReturn(savedIssue)
+
+        val result = couponService.issueNoLock(1L, 100L)
+
+        assertEquals(1, campaign.issuedQuantity)
+        assertEquals(100L, result.userId)
+    }
+
+    @Test
+    fun `issueNoLock - 존재하지 않는 쿠폰이면 CouponNotFoundException이 발생한다`() {
+        `when`(couponCampaignRepository.findById(999L)).thenReturn(Optional.empty())
+
+        assertThrows(CouponNotFoundException::class.java) {
+            couponService.issueNoLock(999L, 100L)
+        }
+    }
+
+    @Test
+    fun `issueNoLock - 오픈 시각 이전에 발급 요청하면 CouponNotYetOpenException이 발생한다`() {
+        val openAt = LocalDateTime.of(2026, 8, 14, 10, 0)
+        val threeSecondsBeforeOpen = openAt.minusSeconds(3).atZone(ZoneId.systemDefault()).toInstant()
+        val fixedClock = Clock.fixed(threeSecondsBeforeOpen, ZoneId.systemDefault())
+        val serviceWithFixedClock =
+            CouponService(couponCampaignRepository, couponTemplateRepository, couponIssueRepository, fixedClock)
+        val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 0, openAt = openAt)
+        `when`(couponCampaignRepository.findById(1L)).thenReturn(Optional.of(campaign))
+
+        assertThrows(CouponNotYetOpenException::class.java) {
+            serviceWithFixedClock.issueNoLock(1L, 100L)
+        }
+    }
+
+    @Test
+    fun `issueNoLock - 이미 발급받은 사용자는 DuplicateIssueException이 발생한다`() {
+        val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 1)
+        `when`(couponCampaignRepository.findById(1L)).thenReturn(Optional.of(campaign))
+        `when`(couponIssueRepository.existsByCouponCampaignIdAndUserId(1L, 100L)).thenReturn(true)
+
+        assertThrows(DuplicateIssueException::class.java) {
+            couponService.issueNoLock(1L, 100L)
+        }
+    }
+
+    @Test
+    fun `issueNoLock - 재고가 소진되면 CouponSoldOutException이 발생한다`() {
+        val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 1, issuedQuantity = 1)
+        `when`(couponCampaignRepository.findById(1L)).thenReturn(Optional.of(campaign))
+        `when`(couponIssueRepository.existsByCouponCampaignIdAndUserId(1L, 100L)).thenReturn(false)
+
+        assertThrows(CouponSoldOutException::class.java) {
+            couponService.issueNoLock(1L, 100L)
         }
     }
 
