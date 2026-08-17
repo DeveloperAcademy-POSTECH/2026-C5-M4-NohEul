@@ -30,6 +30,11 @@ class CouponController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "발급 성공"),
         ApiResponse(
+            responseCode = "403",
+            description = "아직 오픈되지 않은 쿠폰(COUPON_NOT_YET_OPEN)",
+            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+        ),
+        ApiResponse(
             responseCode = "404",
             description = "쿠폰을 찾을 수 없음",
             content = [Content(schema = Schema(implementation = ErrorResponse::class))],
@@ -47,7 +52,7 @@ class CouponController(
     ): CouponIssueResponse {
         val issue = couponService.issue(couponId, request.userId)
         return CouponIssueResponse(
-            couponId = issue.couponId,
+            couponId = issue.couponCampaignId,
             userId = issue.userId,
             issuedAt = issue.issuedAt,
         )
@@ -64,13 +69,13 @@ class CouponController(
     )
     @GetMapping("/{couponId}")
     fun getCoupon(@Parameter(description = "조회할 쿠폰 ID") @PathVariable couponId: Long): CouponResponse {
-        val coupon = couponService.getCoupon(couponId)
+        val (campaign, template) = couponService.getCoupon(couponId)
         return CouponResponse(
-            id = coupon.id!!,
-            name = coupon.name,
-            totalQuantity = coupon.totalQuantity,
-            issuedQuantity = coupon.issuedQuantity,
-            remainingQuantity = coupon.totalQuantity - coupon.issuedQuantity,
+            id = campaign.id!!,
+            name = template.name,
+            totalQuantity = campaign.totalQuantity,
+            issuedQuantity = campaign.issuedQuantity,
+            remainingQuantity = campaign.totalQuantity - campaign.issuedQuantity,
         )
     }
 }

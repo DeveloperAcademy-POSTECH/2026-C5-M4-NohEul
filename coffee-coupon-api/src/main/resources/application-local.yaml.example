@@ -8,5 +8,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
+      # 이 브랜치는 테이블/컬럼 rename을 포함하므로 기존 로컬 DB에는 update가 깨끗하게 적용되지 않는다.
+      # 로컬 DB를 새로 만들거나 최초 1회 ddl-auto: create로 기동할 것.
       ddl-auto: update
     show-sql: true

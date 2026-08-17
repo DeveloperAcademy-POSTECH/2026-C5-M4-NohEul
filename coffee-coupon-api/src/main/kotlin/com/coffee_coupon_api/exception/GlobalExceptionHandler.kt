@@ -29,4 +29,9 @@ class GlobalExceptionHandler {
     fun handleDataIntegrityViolation(ex: DataIntegrityViolationException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.CONFLICT)
             .body(ErrorResponse("DUPLICATE_ISSUE", "Already issued"))
+
+    @ExceptionHandler(CouponNotYetOpenException::class)
+    fun handleNotYetOpen(ex: CouponNotYetOpenException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(ErrorResponse("COUPON_NOT_YET_OPEN", ex.message ?: "Coupon not yet open"))
 }

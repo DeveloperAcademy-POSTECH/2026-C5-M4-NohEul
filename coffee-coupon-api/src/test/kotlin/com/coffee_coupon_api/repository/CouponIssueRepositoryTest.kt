@@ -18,19 +18,19 @@ class CouponIssueRepositoryTest {
 
     @Test
     fun `발급 이력을 저장하고 조회할 수 있다`() {
-        couponIssueRepository.save(CouponIssue(couponId = 1L, userId = 100L))
+        couponIssueRepository.save(CouponIssue(couponCampaignId = 1L, userId = 100L))
 
-        val exists = couponIssueRepository.existsByCouponIdAndUserId(1L, 100L)
+        val exists = couponIssueRepository.existsByCouponCampaignIdAndUserId(1L, 100L)
 
         assertEquals(true, exists)
     }
 
     @Test
     fun `같은 쿠폰에 같은 사용자를 중복 저장하면 예외가 발생한다`() {
-        couponIssueRepository.saveAndFlush(CouponIssue(couponId = 1L, userId = 100L))
+        couponIssueRepository.saveAndFlush(CouponIssue(couponCampaignId = 1L, userId = 100L))
 
         assertThrows(DataIntegrityViolationException::class.java) {
-            couponIssueRepository.saveAndFlush(CouponIssue(couponId = 1L, userId = 100L))
+            couponIssueRepository.saveAndFlush(CouponIssue(couponCampaignId = 1L, userId = 100L))
         }
     }
 }

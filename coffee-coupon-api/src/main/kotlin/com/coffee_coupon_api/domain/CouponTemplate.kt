@@ -6,10 +6,9 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 
 @Entity
-class Coupon(
+class CouponTemplate(
     var name: String,
-    var totalQuantity: Int,
-    var issuedQuantity: Int = 0,
+    var discountRate: Int,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
