@@ -1,5 +1,6 @@
 package com.coffee_coupon_api.controller
 
+import com.coffee_coupon_api.domain.CouponIssue
 import com.coffee_coupon_api.dto.CouponIssueRequest
 import com.coffee_coupon_api.dto.CouponIssueResponse
 import com.coffee_coupon_api.dto.CouponResponse
@@ -53,12 +54,7 @@ class CouponController(
         @Parameter(description = "발급할 쿠폰 ID") @PathVariable couponId: Long,
         @RequestBody request: CouponIssueRequest,
     ): CouponIssueResponse {
-        val issue = couponService.issuePessimistic(couponId, request.userId)
-        return CouponIssueResponse(
-            couponId = issue.couponCampaignId,
-            userId = issue.userId,
-            issuedAt = issue.issuedAt,
-        )
+        return couponService.issuePessimistic(couponId, request.userId).toResponse()
     }
 
     @Operation(
@@ -89,12 +85,7 @@ class CouponController(
         @Parameter(description = "발급할 쿠폰 ID") @PathVariable couponId: Long,
         @RequestBody request: CouponIssueRequest,
     ): CouponIssueResponse {
-        val issue = couponService.issueNoLock(couponId, request.userId)
-        return CouponIssueResponse(
-            couponId = issue.couponCampaignId,
-            userId = issue.userId,
-            issuedAt = issue.issuedAt,
-        )
+        return couponService.issueNoLock(couponId, request.userId).toResponse()
     }
 
     @Operation(summary = "쿠폰 조회", description = "쿠폰 ID로 쿠폰의 발급 현황(총 수량/발급 수량/잔여 수량)을 조회한다.")
@@ -118,3 +109,9 @@ class CouponController(
         )
     }
 }
+
+private fun CouponIssue.toResponse() = CouponIssueResponse(
+    couponId = couponCampaignId,
+    userId = userId,
+    issuedAt = issuedAt,
+)
