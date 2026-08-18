@@ -40,6 +40,7 @@ class CouponService(
 
     @Transactional
     fun issueNoLock(couponCampaignId: Long, userId: Long): CouponIssue {
+        // findById는 행을 잠그지 않아서, completeIssue의 재고 체크~증가 사이에 다른 트랜잭션이 끼어들 수 있다(Lost Update).
         val campaign = couponCampaignRepository.findById(couponCampaignId)
             .orElseThrow { CouponNotFoundException(couponCampaignId) }
 
@@ -51,17 +52,30 @@ class CouponService(
     }
 
     private fun completeIssue(campaign: CouponCampaign, couponCampaignId: Long, userId: Long): CouponIssue {
+        ensureNotAlreadyIssued(couponCampaignId, userId)
+        ensureStockAvailable(campaign, couponCampaignId)
+        incrementIssuedQuantity(campaign)
+        return saveIssue(couponCampaignId, userId)
+    }
+
+    private fun ensureNotAlreadyIssued(couponCampaignId: Long, userId: Long) {
         if (couponIssueRepository.existsByCouponCampaignIdAndUserId(couponCampaignId, userId)) {
             throw DuplicateIssueException(couponCampaignId, userId)
         }
+    }
 
+    private fun ensureStockAvailable(campaign: CouponCampaign, couponCampaignId: Long) {
         if (campaign.issuedQuantity >= campaign.totalQuantity) {
             throw CouponSoldOutException(couponCampaignId)
         }
+    }
 
+    private fun incrementIssuedQuantity(campaign: CouponCampaign) {
         campaign.issuedQuantity += 1
         couponCampaignRepository.save(campaign)
+    }
 
+    private fun saveIssue(couponCampaignId: Long, userId: Long): CouponIssue {
         return couponIssueRepository.save(CouponIssue(couponCampaignId = couponCampaignId, userId = userId))
     }
 

@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param
 
 interface CouponCampaignRepository : JpaRepository<CouponCampaign, Long> {
 
+    // MySQL에서는 SELECT ... FOR UPDATE로 번역되어, 트랜잭션이 끝날 때까지 해당 행을 배타적으로 잠근다.
+    // (PESSIMISTIC_READ는 쓰기만 막고 읽기는 허용, OPTIMISTIC은 DB 락 없이 @Version으로 충돌만 감지)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from CouponCampaign c where c.id = :id")
     fun findByIdForUpdate(@Param("id") id: Long): Optional<CouponCampaign>
