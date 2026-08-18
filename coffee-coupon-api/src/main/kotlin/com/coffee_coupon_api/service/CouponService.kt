@@ -23,6 +23,27 @@ class CouponService(
     private val clock: Clock = Clock.systemDefaultZone(),
 ) {
 
+    @Transactional(readOnly = true)
+    fun getCoupon(couponCampaignId: Long): Pair<CouponCampaign, CouponTemplate> {
+        val campaign = couponCampaignRepository.findById(couponCampaignId)
+            .orElseThrow { CouponNotFoundException(couponCampaignId) }
+        val template = couponTemplateRepository.findById(campaign.couponTemplateId)
+            .orElseThrow { CouponNotFoundException(campaign.couponTemplateId) }
+        return campaign to template
+    }
+
+    @Transactional
+    fun issueNoLock(couponCampaignId: Long, userId: Long): CouponIssue {
+        val campaign = couponCampaignRepository.findById(couponCampaignId)
+            .orElseThrow { CouponNotFoundException(couponCampaignId) }
+
+        if (LocalDateTime.now(clock).isBefore(campaign.openAt)) {
+            throw CouponNotYetOpenException(couponCampaignId, campaign.openAt)
+        }
+
+        return completeIssue(campaign, couponCampaignId, userId)
+    }
+
     @Transactional
     fun issuePessimistic(couponCampaignId: Long, userId: Long): CouponIssue {
         val openAt = couponCampaignRepository.findOpenAtById(couponCampaignId)
@@ -34,18 +55,6 @@ class CouponService(
 
         val campaign = couponCampaignRepository.findByIdForUpdate(couponCampaignId)
             .orElseThrow { CouponNotFoundException(couponCampaignId) }
-
-        return completeIssue(campaign, couponCampaignId, userId)
-    }
-
-    @Transactional
-    fun issueNoLock(couponCampaignId: Long, userId: Long): CouponIssue {
-        val campaign = couponCampaignRepository.findById(couponCampaignId)
-            .orElseThrow { CouponNotFoundException(couponCampaignId) }
-
-        if (LocalDateTime.now(clock).isBefore(campaign.openAt)) {
-            throw CouponNotYetOpenException(couponCampaignId, campaign.openAt)
-        }
 
         return completeIssue(campaign, couponCampaignId, userId)
     }
@@ -63,14 +72,5 @@ class CouponService(
         couponCampaignRepository.save(campaign)
 
         return couponIssueRepository.save(CouponIssue(couponCampaignId = couponCampaignId, userId = userId))
-    }
-
-    @Transactional(readOnly = true)
-    fun getCoupon(couponCampaignId: Long): Pair<CouponCampaign, CouponTemplate> {
-        val campaign = couponCampaignRepository.findById(couponCampaignId)
-            .orElseThrow { CouponNotFoundException(couponCampaignId) }
-        val template = couponTemplateRepository.findById(campaign.couponTemplateId)
-            .orElseThrow { CouponNotFoundException(campaign.couponTemplateId) }
-        return campaign to template
     }
 }
