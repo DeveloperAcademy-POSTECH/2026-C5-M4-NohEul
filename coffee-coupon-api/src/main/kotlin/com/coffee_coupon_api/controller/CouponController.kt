@@ -1,5 +1,6 @@
 package com.coffee_coupon_api.controller
 
+import com.coffee_coupon_api.domain.CouponIssue
 import com.coffee_coupon_api.dto.CouponIssueRequest
 import com.coffee_coupon_api.dto.CouponIssueResponse
 import com.coffee_coupon_api.dto.CouponResponse
@@ -26,25 +27,34 @@ class CouponController(
     private val couponService: CouponService,
 ) {
 
-    @Operation(summary = "쿠폰 조회", description = "쿠폰 ID로 쿠폰의 발급 현황(총 수량/발급 수량/잔여 수량)을 조회한다.")
+    @Operation(
+        summary = "쿠폰 발급 (비관적 락)",
+        description = "지정한 쿠폰을 사용자에게 발급한다. `SELECT ... FOR UPDATE`로 캠페인 행에 락을 걸어 동시 요청에도 재고를 초과 발급하지 않는다.",
+    )
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "조회 성공"),
+        ApiResponse(responseCode = "200", description = "발급 성공"),
+        ApiResponse(
+            responseCode = "403",
+            description = "아직 오픈되지 않은 쿠폰(COUPON_NOT_YET_OPEN)",
+            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+        ),
         ApiResponse(
             responseCode = "404",
             description = "쿠폰을 찾을 수 없음",
             content = [Content(schema = Schema(implementation = ErrorResponse::class))],
         ),
+        ApiResponse(
+            responseCode = "409",
+            description = "쿠폰 소진(COUPON_SOLD_OUT) 또는 중복 발급(DUPLICATE_ISSUE)",
+            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+        ),
     )
-    @GetMapping("/{couponId}")
-    fun getCoupon(@Parameter(description = "조회할 쿠폰 ID") @PathVariable couponId: Long): CouponResponse {
-        val (campaign, template) = couponService.getCoupon(couponId)
-        return CouponResponse(
-            id = campaign.id!!,
-            name = template.name,
-            totalQuantity = campaign.totalQuantity,
-            issuedQuantity = campaign.issuedQuantity,
-            remainingQuantity = campaign.totalQuantity - campaign.issuedQuantity,
-        )
+    @PostMapping("/{couponId}/issue-pessimistic")
+    fun issuePessimistic(
+        @Parameter(description = "발급할 쿠폰 ID") @PathVariable couponId: Long,
+        @RequestBody request: CouponIssueRequest,
+    ): CouponIssueResponse {
+        return couponService.issuePessimistic(couponId, request.userId).toResponse()
     }
 
     @Operation(
@@ -75,46 +85,33 @@ class CouponController(
         @Parameter(description = "발급할 쿠폰 ID") @PathVariable couponId: Long,
         @RequestBody request: CouponIssueRequest,
     ): CouponIssueResponse {
-        val issue = couponService.issueNoLock(couponId, request.userId)
-        return CouponIssueResponse(
-            couponId = issue.couponCampaignId,
-            userId = issue.userId,
-            issuedAt = issue.issuedAt,
-        )
+        return couponService.issueNoLock(couponId, request.userId).toResponse()
     }
 
-    @Operation(
-        summary = "쿠폰 발급 (비관적 락)",
-        description = "지정한 쿠폰을 사용자에게 발급한다. `SELECT ... FOR UPDATE`로 캠페인 행에 락을 걸어 동시 요청에도 재고를 초과 발급하지 않는다.",
-    )
+    @Operation(summary = "쿠폰 조회", description = "쿠폰 ID로 쿠폰의 발급 현황(총 수량/발급 수량/잔여 수량)을 조회한다.")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "발급 성공"),
-        ApiResponse(
-            responseCode = "403",
-            description = "아직 오픈되지 않은 쿠폰(COUPON_NOT_YET_OPEN)",
-            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
-        ),
+        ApiResponse(responseCode = "200", description = "조회 성공"),
         ApiResponse(
             responseCode = "404",
             description = "쿠폰을 찾을 수 없음",
             content = [Content(schema = Schema(implementation = ErrorResponse::class))],
         ),
-        ApiResponse(
-            responseCode = "409",
-            description = "쿠폰 소진(COUPON_SOLD_OUT) 또는 중복 발급(DUPLICATE_ISSUE)",
-            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
-        ),
     )
-    @PostMapping("/{couponId}/issue-pessimistic")
-    fun issuePessimistic(
-        @Parameter(description = "발급할 쿠폰 ID") @PathVariable couponId: Long,
-        @RequestBody request: CouponIssueRequest,
-    ): CouponIssueResponse {
-        val issue = couponService.issuePessimistic(couponId, request.userId)
-        return CouponIssueResponse(
-            couponId = issue.couponCampaignId,
-            userId = issue.userId,
-            issuedAt = issue.issuedAt,
+    @GetMapping("/{couponId}")
+    fun getCoupon(@Parameter(description = "조회할 쿠폰 ID") @PathVariable couponId: Long): CouponResponse {
+        val (campaign, template) = couponService.getCoupon(couponId)
+        return CouponResponse(
+            id = campaign.id!!,
+            name = template.name,
+            totalQuantity = campaign.totalQuantity,
+            issuedQuantity = campaign.issuedQuantity,
+            remainingQuantity = campaign.totalQuantity - campaign.issuedQuantity,
         )
     }
 }
+
+private fun CouponIssue.toResponse() = CouponIssueResponse(
+    couponId = couponCampaignId,
+    userId = userId,
+    issuedAt = issuedAt,
+)
