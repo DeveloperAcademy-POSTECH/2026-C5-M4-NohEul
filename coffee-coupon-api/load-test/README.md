@@ -8,6 +8,8 @@
 
 알림 대상 30만 명 · 재고 2,000장 · 실제 시도율 20%(6만 명) · 오픈 직후 몰림 10초를 가정해서 역산한 값입니다. 근거는 위 스펙 문서 참고.
 
+**로컬 실행 기본값은 500입니다.** 6,000은 이 시스템이 감당해야 한다고 가정한 설계 목표치이고, `coupon-issue-scale.js`의 `RATE` 기본값은 500입니다. 로컬 단일 인스턴스(HikariCP 풀 10개, k6·앱·DB가 한 장비를 공유)에서 6,000 QPS를 걸면 락 전략 차이보다 커넥션 풀/장비 포화가 결과를 지배해 비교가 어려워집니다. 500만으로도 no-lock 과발급 재현과 전략 간 상대 비교라는 목적은 충분합니다(아래 "왜 issuedQuantity가 아니라 실제 행 수로 판정하는가" 참고 — 이미 500 req/s 실측으로 확인됨). 6,000으로 절대 처리량을 보고 싶으면 `-e RATE=6000`을 명시적으로 붙이세요.
+
 ## 사전 준비
 
 - k6 (`brew install k6`)
@@ -33,11 +35,11 @@
    ```bash
    MYSQL_PWD='<local.yaml의 password>' mysql -h 127.0.0.1 -u root -D coffee_coupon < load-test/seed.sql
    ```
-4. 부하를 발사한다 (기본값 6,000 req/s × 10초 = 총 60,000건).
+4. 부하를 발사한다 (기본값 500 req/s × 10초 = 총 5,000건 — 로컬 실행 기본값, 설계 목표치는 6,000).
    ```bash
    k6 run -e CAMPAIGN_ID=<3단계에서 나온 값> -e STRATEGY=$STRATEGY coffee-coupon-api/load-test/coupon-issue-scale.js
    ```
-   작게 먼저 확인하고 싶으면 `-e RATE=10 -e DURATION=2s -e PRE_ALLOCATED_VUS=10 -e MAX_VUS=20`으로 축소해서 실행.
+   작게 먼저 확인하고 싶으면 `-e RATE=10 -e DURATION=2s -e PRE_ALLOCATED_VUS=10 -e MAX_VUS=20`으로 축소해서 실행. 설계 목표치(6,000)로 돌리려면 `-e RATE=6000`.
 5. 결과를 검증한다. `verify.sh`는 `campaign.issuedQuantity` 카운터를 신뢰하지 않고 **`coupon_issue` 테이블의 실제 행 수**로 과발급 여부를 판정하므로(이유는 아래 "왜 issuedQuantity가 아니라 실제 행 수로 판정하는가" 참고), `seed.sql`과 마찬가지로 `MYSQL_PWD`를 넘겨야 한다.
    ```bash
    MYSQL_PWD='<local.yaml의 password>' coffee-coupon-api/load-test/verify.sh <campaign_id>
