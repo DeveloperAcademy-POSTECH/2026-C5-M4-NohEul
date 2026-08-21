@@ -51,6 +51,7 @@ class CouponCampaignRepositoryTest {
         val first = couponCampaignRepository.findById(saved.id!!).orElseThrow()
         testEntityManager.clear()
         val second = couponCampaignRepository.findById(saved.id!!).orElseThrow()
+        testEntityManager.clear()
 
         first.issuedQuantity += 1
         couponCampaignRepository.saveAndFlush(first)
