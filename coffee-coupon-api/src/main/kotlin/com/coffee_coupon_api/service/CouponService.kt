@@ -3,6 +3,7 @@ package com.coffee_coupon_api.service
 import com.coffee_coupon_api.domain.CouponCampaign
 import com.coffee_coupon_api.domain.CouponIssue
 import com.coffee_coupon_api.domain.CouponTemplate
+import com.coffee_coupon_api.exception.CouponIssueConflictException
 import com.coffee_coupon_api.exception.CouponNotFoundException
 import com.coffee_coupon_api.exception.CouponNotYetOpenException
 import com.coffee_coupon_api.exception.CouponSoldOutException
@@ -12,8 +13,11 @@ import com.coffee_coupon_api.repository.CouponIssueRepository
 import com.coffee_coupon_api.repository.CouponTemplateRepository
 import java.time.Clock
 import java.time.LocalDateTime
+import org.springframework.orm.ObjectOptimisticLockingFailureException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+
+private const val OPTIMISTIC_RETRY_DELAY_MS = 20L
 
 @Service
 class CouponService(
@@ -21,6 +25,7 @@ class CouponService(
     private val couponTemplateRepository: CouponTemplateRepository,
     private val couponIssueRepository: CouponIssueRepository,
     private val clock: Clock = Clock.systemDefaultZone(),
+    private val optimisticMaxAttempts: Int = 3,
 ) {
 
     @Transactional
@@ -49,6 +54,27 @@ class CouponService(
         }
 
         return completeIssue(campaign, couponCampaignId, userId)
+    }
+
+    @Transactional
+    fun issueOptimistic(couponCampaignId: Long, userId: Long): CouponIssue {
+        var lastException: ObjectOptimisticLockingFailureException? = null
+        for (attempt in 1..optimisticMaxAttempts) {
+            try {
+                val campaign = couponCampaignRepository.findById(couponCampaignId)
+                    .orElseThrow { CouponNotFoundException(couponCampaignId) }
+                if (LocalDateTime.now(clock).isBefore(campaign.openAt)) {
+                    throw CouponNotYetOpenException(couponCampaignId, campaign.openAt)
+                }
+                val result = completeIssue(campaign, couponCampaignId, userId)
+                couponCampaignRepository.flush()
+                return result
+            } catch (e: ObjectOptimisticLockingFailureException) {
+                lastException = e
+                if (attempt < optimisticMaxAttempts) Thread.sleep(OPTIMISTIC_RETRY_DELAY_MS)
+            }
+        }
+        throw CouponIssueConflictException(couponCampaignId, lastException)
     }
 
     private fun completeIssue(campaign: CouponCampaign, couponCampaignId: Long, userId: Long): CouponIssue {
