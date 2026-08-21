@@ -11,3 +11,6 @@ class DuplicateIssueException(couponId: Long, userId: Long) :
 
 class CouponNotYetOpenException(couponId: Long, openAt: LocalDateTime) :
     RuntimeException("Coupon $couponId not yet open. Opens at $openAt")
+
+class CouponIssueConflictException(couponId: Long, cause: Throwable? = null) :
+    RuntimeException("재시도 소진: campaign=$couponId", cause)
