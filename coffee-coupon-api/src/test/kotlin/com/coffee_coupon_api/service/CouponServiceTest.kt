@@ -22,6 +22,8 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.any
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.orm.ObjectOptimisticLockingFailureException
 
@@ -293,6 +295,8 @@ class CouponServiceTest {
         val result = couponService.issueOptimistic(1L, 100L)
 
         assertEquals(100L, result.userId)
+        assertEquals(1, campaign.issuedQuantity)
+        verify(couponIssueRepository, times(1)).save(any(CouponIssue::class.java))
     }
 
     @Test
