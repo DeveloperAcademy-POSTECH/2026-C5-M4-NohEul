@@ -88,6 +88,38 @@ class CouponController(
         return couponService.issueNoLock(couponId, request.userId).toResponse()
     }
 
+    @Operation(
+        summary = "쿠폰 발급 (낙관적 락)",
+        description = "지정한 쿠폰을 사용자에게 발급한다. `@Version` 기반으로 커밋 시점 충돌을 감지하고, " +
+            "충돌 시 최대 3회까지 재조회 후 재시도한다. 재시도를 다 써도 충돌하면 409를 반환한다.",
+    )
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "발급 성공"),
+        ApiResponse(
+            responseCode = "403",
+            description = "아직 오픈되지 않은 쿠폰(COUPON_NOT_YET_OPEN)",
+            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+        ),
+        ApiResponse(
+            responseCode = "404",
+            description = "쿠폰을 찾을 수 없음",
+            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+        ),
+        ApiResponse(
+            responseCode = "409",
+            description = "쿠폰 소진(COUPON_SOLD_OUT), 중복 발급(DUPLICATE_ISSUE), " +
+                "또는 재시도 소진으로 인한 동시 수정 충돌(COUPON_ISSUE_CONFLICT)",
+            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+        ),
+    )
+    @PostMapping("/{couponId}/issue-optimistic")
+    fun issueOptimistic(
+        @Parameter(description = "발급할 쿠폰 ID") @PathVariable couponId: Long,
+        @RequestBody request: CouponIssueRequest,
+    ): CouponIssueResponse {
+        return couponService.issueOptimistic(couponId, request.userId).toResponse()
+    }
+
     @Operation(summary = "쿠폰 조회", description = "쿠폰 ID로 쿠폰의 발급 현황(총 수량/발급 수량/잔여 수량)을 조회한다.")
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "조회 성공"),
