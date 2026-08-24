@@ -45,7 +45,10 @@ class CouponService(
 
     @Transactional
     fun issueNoLock(couponCampaignId: Long, userId: Long): CouponIssue {
-        // findById는 행을 잠그지 않아서, completeIssue의 재고 체크~증가 사이에 다른 트랜잭션이 끼어들 수 있다(Lost Update).
+        // findById는 행을 잠그지 않아서, 재고 체크~증가 사이에 다른 트랜잭션이 끼어들 수 있다(Lost Update).
+        // completeIssue를 그대로 쓰지 않는 이유: 그 안의 incrementIssuedQuantity는 엔티티 기반 save라
+        // CouponCampaign의 @Version이 자동으로 버전 체크를 걸어버려서, "락 없음"이라는 전제가 깨진다.
+        // 그래서 재고 증가만 @Version을 우회하는 벌크 UPDATE(incrementIssuedQuantityRaw)로 따로 한다.
         val campaign = couponCampaignRepository.findById(couponCampaignId)
             .orElseThrow { CouponNotFoundException(couponCampaignId) }
 
@@ -53,7 +56,10 @@ class CouponService(
             throw CouponNotYetOpenException(couponCampaignId, campaign.openAt)
         }
 
-        return completeIssue(campaign, couponCampaignId, userId)
+        ensureNotAlreadyIssued(couponCampaignId, userId)
+        ensureStockAvailable(campaign, couponCampaignId)
+        incrementIssuedQuantityRaw(couponCampaignId)
+        return saveIssue(couponCampaignId, userId)
     }
 
     @Transactional
@@ -100,6 +106,10 @@ class CouponService(
     private fun incrementIssuedQuantity(campaign: CouponCampaign) {
         campaign.issuedQuantity += 1
         couponCampaignRepository.save(campaign)
+    }
+
+    private fun incrementIssuedQuantityRaw(couponCampaignId: Long) {
+        couponCampaignRepository.incrementIssuedQuantityRaw(couponCampaignId)
     }
 
     private fun saveIssue(couponCampaignId: Long, userId: Long): CouponIssue {

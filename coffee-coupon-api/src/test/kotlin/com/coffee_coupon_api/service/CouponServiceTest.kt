@@ -141,13 +141,12 @@ class CouponServiceTest {
         val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 0)
         `when`(couponCampaignRepository.findById(1L)).thenReturn(Optional.of(campaign))
         `when`(couponIssueRepository.existsByCouponCampaignIdAndUserId(1L, 100L)).thenReturn(false)
-        `when`(couponCampaignRepository.save(campaign)).thenReturn(campaign)
         val savedIssue = CouponIssue(couponCampaignId = 1L, userId = 100L)
         `when`(couponIssueRepository.save(any(CouponIssue::class.java))).thenReturn(savedIssue)
 
         val result = couponService.issueNoLock(1L, 100L)
 
-        assertEquals(1, campaign.issuedQuantity)
+        verify(couponCampaignRepository).incrementIssuedQuantityRaw(1L)
         assertEquals(100L, result.userId)
     }
 
