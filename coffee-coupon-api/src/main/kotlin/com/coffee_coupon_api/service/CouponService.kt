@@ -81,6 +81,7 @@ class CouponService(
         ensureNotAlreadyIssued(couponCampaignId, userId)
         ensureStockAvailable(campaign, couponCampaignId)
         incrementIssuedQuantity(campaign)
+        couponCampaignRepository.flush()
         return saveIssue(couponCampaignId, userId)
     }
 
