@@ -300,7 +300,7 @@ class CouponServiceTest {
         val savedIssue = CouponIssue(couponCampaignId = 1L, userId = 100L)
         `when`(couponIssueRepository.save(any(CouponIssue::class.java))).thenReturn(savedIssue)
         doThrow(ObjectOptimisticLockingFailureException(CouponCampaign::class.java, 1L))
-            .`when`(couponCampaignRepository).flush()
+            .`when`(couponCampaignRepository).save(campaign)
 
         assertThrows(CouponIssueConflictException::class.java) {
             serviceWithOneAttempt.issueOptimistic(1L, 100L)

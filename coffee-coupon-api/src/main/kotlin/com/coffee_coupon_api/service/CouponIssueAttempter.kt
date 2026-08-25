@@ -28,16 +28,13 @@ class CouponIssueAttempter(
         if (LocalDateTime.now(clock).isBefore(campaign.openAt)) {
             throw CouponNotYetOpenException(couponCampaignId, campaign.openAt)
         }
-        val result = completeIssue(campaign, couponCampaignId, userId)
-        couponCampaignRepository.flush()
-        return result
+        return completeIssue(campaign, couponCampaignId, userId)
     }
 
     internal fun completeIssue(campaign: CouponCampaign, couponCampaignId: Long, userId: Long): CouponIssue {
         ensureNotAlreadyIssued(couponCampaignId, userId)
         ensureStockAvailable(campaign, couponCampaignId)
         incrementIssuedQuantity(campaign)
-        couponCampaignRepository.flush()
         return saveIssue(couponCampaignId, userId)
     }
 
