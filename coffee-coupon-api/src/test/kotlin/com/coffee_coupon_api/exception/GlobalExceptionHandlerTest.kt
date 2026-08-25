@@ -49,4 +49,12 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.FORBIDDEN, response.statusCode)
         assertEquals("COUPON_NOT_YET_OPEN", response.body?.code)
     }
+
+    @Test
+    fun `낙관적 락 재시도가 소진되면 409를 반환한다`() {
+        val response = handler.handleIssueConflict(CouponIssueConflictException(1L))
+
+        assertEquals(HttpStatus.CONFLICT, response.statusCode)
+        assertEquals("COUPON_ISSUE_CONFLICT", response.body?.code)
+    }
 }

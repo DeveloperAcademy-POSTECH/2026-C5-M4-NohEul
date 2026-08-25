@@ -34,4 +34,9 @@ class GlobalExceptionHandler {
     fun handleNotYetOpen(ex: CouponNotYetOpenException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.FORBIDDEN)
             .body(ErrorResponse("COUPON_NOT_YET_OPEN", ex.message ?: "Coupon not yet open"))
+
+    @ExceptionHandler(CouponIssueConflictException::class)
+    fun handleIssueConflict(ex: CouponIssueConflictException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(ErrorResponse("COUPON_ISSUE_CONFLICT", ex.message ?: "Concurrent modification conflict"))
 }

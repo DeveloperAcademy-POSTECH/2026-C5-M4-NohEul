@@ -6,6 +6,7 @@ import java.time.LocalDateTime
 import java.util.Optional
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
@@ -21,4 +22,12 @@ interface CouponCampaignRepository : JpaRepository<CouponCampaign, Long> {
     // 뒤따르는 findByIdForUpdate가 1차 캐시의 stale 인스턴스를 돌려줘 비관적 락이 무력화된다.
     @Query("select c.openAt from CouponCampaign c where c.id = :id")
     fun findOpenAtById(@Param("id") id: Long): LocalDateTime?
+
+    // issueNoLock 전용. 엔티티 기반 save()는 CouponCampaign에 붙은 @Version 때문에 자동으로
+    // 버전 체크를 받아버려서, "락 없음" 시나리오가 의도치 않게 보호받게 된다. HQL 벌크 UPDATE는
+    // "versioned" 키워드를 명시하지 않는 한 버전 컬럼을 건드리지 않으므로, 이 쿼리는 완전히
+    // 무방비 상태의 증가를 재현한다.
+    @Modifying
+    @Query("update CouponCampaign c set c.issuedQuantity = c.issuedQuantity + 1 where c.id = :id")
+    fun incrementIssuedQuantityRaw(@Param("id") id: Long): Int
 }

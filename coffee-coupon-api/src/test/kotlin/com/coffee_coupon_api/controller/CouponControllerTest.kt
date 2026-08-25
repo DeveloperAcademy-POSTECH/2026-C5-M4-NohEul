@@ -7,12 +7,14 @@ import com.coffee_coupon_api.repository.CouponCampaignRepository
 import com.coffee_coupon_api.repository.CouponIssueRepository
 import com.coffee_coupon_api.repository.CouponTemplateRepository
 import java.time.LocalDateTime
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
+import org.springframework.test.context.transaction.TestTransaction
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
@@ -51,6 +53,16 @@ class CouponControllerTest {
         )
     }
 
+    @AfterEach
+    fun tearDown() {
+        // issue-optimistic 테스트는 REQUIRES_NEW가 새 커넥션에서 campaign을 보게 하려고
+        // 테스트 트랜잭션을 커밋하고 끝내버린다 — 그 경우 자동 롤백이 없으니 직접 지운다.
+        // 다른 테스트는 트랜잭션이 아직 열려 있어 롤백될 예정이라, 여기서 지워도 무해하다.
+        couponIssueRepository.deleteAll()
+        couponCampaignRepository.deleteAll()
+        couponTemplateRepository.deleteAll()
+    }
+
     @Test
     fun `issue-pessimistic - 쿠폰을 정상적으로 발급받는다`() {
         mockMvc.perform(
@@ -66,6 +78,23 @@ class CouponControllerTest {
     fun `issue-no-lock - 쿠폰을 정상적으로 발급받는다`() {
         mockMvc.perform(
             post("/api/coupons/${campaign.id}/issue-no-lock")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(mapOf("userId" to 1L))),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.userId").value(1))
+    }
+
+    @Test
+    fun `issue-optimistic - 쿠폰을 정상적으로 발급받는다`() {
+        // attemptIssue()가 REQUIRES_NEW로 새 커넥션을 열기 때문에, setUp()에서 저장한
+        // campaign이 테스트 트랜잭션 안에 커밋 안 된 채로 남아있으면 그 새 커넥션에서 안 보인다.
+        // 여기서 커밋해서 끝내야 REQUIRES_NEW 쪽에서도 실제로 조회된다.
+        TestTransaction.flagForCommit()
+        TestTransaction.end()
+
+        mockMvc.perform(
+            post("/api/coupons/${campaign.id}/issue-optimistic")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(mapOf("userId" to 1L))),
         )
