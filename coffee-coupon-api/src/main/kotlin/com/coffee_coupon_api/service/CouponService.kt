@@ -23,8 +23,8 @@ private const val OPTIMISTIC_RETRY_DELAY_MS = 20L
 class CouponService(
     private val couponCampaignRepository: CouponCampaignRepository,
     private val couponTemplateRepository: CouponTemplateRepository,
-    private val couponIssueRepository: CouponIssueRepository,
     private val clock: Clock = Clock.systemDefaultZone(),
+    private val couponIssueAttempter: CouponIssueAttempter,
     private val optimisticMaxAttempts: Int = 3,
 ) {
 
@@ -40,7 +40,7 @@ class CouponService(
         val campaign = couponCampaignRepository.findByIdForUpdate(couponCampaignId)
             .orElseThrow { CouponNotFoundException(couponCampaignId) }
 
-        return completeIssue(campaign, couponCampaignId, userId)
+        return couponIssueAttempter.completeIssue(campaign, couponCampaignId, userId)
     }
 
     @Transactional
@@ -56,10 +56,10 @@ class CouponService(
             throw CouponNotYetOpenException(couponCampaignId, campaign.openAt)
         }
 
-        ensureNotAlreadyIssued(couponCampaignId, userId)
-        ensureStockAvailable(campaign, couponCampaignId)
+        couponIssueAttempter.ensureNotAlreadyIssued(couponCampaignId, userId)
+        couponIssueAttempter.ensureStockAvailable(campaign, couponCampaignId)
         incrementIssuedQuantityRaw(couponCampaignId)
-        return saveIssue(couponCampaignId, userId)
+        return couponIssueAttempter.saveIssue(couponCampaignId, userId)
     }
 
     @Transactional
@@ -67,14 +67,7 @@ class CouponService(
         var lastException: ObjectOptimisticLockingFailureException? = null
         for (attempt in 1..optimisticMaxAttempts) {
             try {
-                val campaign = couponCampaignRepository.findById(couponCampaignId)
-                    .orElseThrow { CouponNotFoundException(couponCampaignId) }
-                if (LocalDateTime.now(clock).isBefore(campaign.openAt)) {
-                    throw CouponNotYetOpenException(couponCampaignId, campaign.openAt)
-                }
-                val result = completeIssue(campaign, couponCampaignId, userId)
-                couponCampaignRepository.flush()
-                return result
+                return couponIssueAttempter.attemptIssue(couponCampaignId, userId)
             } catch (e: ObjectOptimisticLockingFailureException) {
                 lastException = e
                 if (attempt < optimisticMaxAttempts) Thread.sleep(OPTIMISTIC_RETRY_DELAY_MS)
@@ -83,37 +76,8 @@ class CouponService(
         throw CouponIssueConflictException(couponCampaignId, lastException)
     }
 
-    private fun completeIssue(campaign: CouponCampaign, couponCampaignId: Long, userId: Long): CouponIssue {
-        ensureNotAlreadyIssued(couponCampaignId, userId)
-        ensureStockAvailable(campaign, couponCampaignId)
-        incrementIssuedQuantity(campaign)
-        couponCampaignRepository.flush()
-        return saveIssue(couponCampaignId, userId)
-    }
-
-    private fun ensureNotAlreadyIssued(couponCampaignId: Long, userId: Long) {
-        if (couponIssueRepository.existsByCouponCampaignIdAndUserId(couponCampaignId, userId)) {
-            throw DuplicateIssueException(couponCampaignId, userId)
-        }
-    }
-
-    private fun ensureStockAvailable(campaign: CouponCampaign, couponCampaignId: Long) {
-        if (campaign.issuedQuantity >= campaign.totalQuantity) {
-            throw CouponSoldOutException(couponCampaignId)
-        }
-    }
-
-    private fun incrementIssuedQuantity(campaign: CouponCampaign) {
-        campaign.issuedQuantity += 1
-        couponCampaignRepository.save(campaign)
-    }
-
     private fun incrementIssuedQuantityRaw(couponCampaignId: Long) {
         couponCampaignRepository.incrementIssuedQuantityRaw(couponCampaignId)
-    }
-
-    private fun saveIssue(couponCampaignId: Long, userId: Long): CouponIssue {
-        return couponIssueRepository.save(CouponIssue(couponCampaignId = couponCampaignId, userId = userId))
     }
 
     @Transactional(readOnly = true)

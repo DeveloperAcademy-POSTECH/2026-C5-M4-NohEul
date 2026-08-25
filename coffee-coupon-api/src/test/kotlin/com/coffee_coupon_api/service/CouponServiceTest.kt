@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.any
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
-import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.orm.ObjectOptimisticLockingFailureException
@@ -32,6 +31,7 @@ class CouponServiceTest {
     private lateinit var couponCampaignRepository: CouponCampaignRepository
     private lateinit var couponTemplateRepository: CouponTemplateRepository
     private lateinit var couponIssueRepository: CouponIssueRepository
+    private lateinit var couponIssueAttempter: CouponIssueAttempter
     private lateinit var couponService: CouponService
 
     @BeforeEach
@@ -39,7 +39,10 @@ class CouponServiceTest {
         couponCampaignRepository = mock(CouponCampaignRepository::class.java)
         couponTemplateRepository = mock(CouponTemplateRepository::class.java)
         couponIssueRepository = mock(CouponIssueRepository::class.java)
-        couponService = CouponService(couponCampaignRepository, couponTemplateRepository, couponIssueRepository)
+        // CouponIssueAttempter는 목이 아니라 실제 인스턴스를 씀 — completeIssue/ensureXxx 로직이
+        // 이제 이 클래스 안에 있어서, 실제로 돌아야 기존 테스트들의 리포지토리 스텁이 그대로 유효함.
+        couponIssueAttempter = CouponIssueAttempter(couponCampaignRepository, couponIssueRepository)
+        couponService = CouponService(couponCampaignRepository, couponTemplateRepository, couponIssueAttempter = couponIssueAttempter)
     }
 
     @Test
@@ -83,7 +86,7 @@ class CouponServiceTest {
         val threeSecondsBeforeOpen = openAt.minusSeconds(3).atZone(ZoneId.systemDefault()).toInstant()
         val fixedClock = Clock.fixed(threeSecondsBeforeOpen, ZoneId.systemDefault())
         val serviceWithFixedClock =
-            CouponService(couponCampaignRepository, couponTemplateRepository, couponIssueRepository, fixedClock)
+            CouponService(couponCampaignRepository, couponTemplateRepository, fixedClock, couponIssueAttempter)
         `when`(couponCampaignRepository.findOpenAtById(1L)).thenReturn(openAt)
 
         assertThrows(CouponNotYetOpenException::class.java) {
@@ -97,7 +100,7 @@ class CouponServiceTest {
         val exactlyOpenInstant = openAt.atZone(ZoneId.systemDefault()).toInstant()
         val fixedClock = Clock.fixed(exactlyOpenInstant, ZoneId.systemDefault())
         val serviceWithFixedClock =
-            CouponService(couponCampaignRepository, couponTemplateRepository, couponIssueRepository, fixedClock)
+            CouponService(couponCampaignRepository, couponTemplateRepository, fixedClock, couponIssueAttempter)
         val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 0, openAt = openAt)
         `when`(couponCampaignRepository.findOpenAtById(1L)).thenReturn(openAt)
         `when`(couponCampaignRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(campaign))
@@ -165,7 +168,7 @@ class CouponServiceTest {
         val threeSecondsBeforeOpen = openAt.minusSeconds(3).atZone(ZoneId.systemDefault()).toInstant()
         val fixedClock = Clock.fixed(threeSecondsBeforeOpen, ZoneId.systemDefault())
         val serviceWithFixedClock =
-            CouponService(couponCampaignRepository, couponTemplateRepository, couponIssueRepository, fixedClock)
+            CouponService(couponCampaignRepository, couponTemplateRepository, fixedClock, couponIssueAttempter)
         val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 0, openAt = openAt)
         `when`(couponCampaignRepository.findById(1L)).thenReturn(Optional.of(campaign))
 
@@ -247,8 +250,11 @@ class CouponServiceTest {
         val openAt = LocalDateTime.of(2026, 8, 14, 10, 0)
         val threeSecondsBeforeOpen = openAt.minusSeconds(3).atZone(ZoneId.systemDefault()).toInstant()
         val fixedClock = Clock.fixed(threeSecondsBeforeOpen, ZoneId.systemDefault())
+        // issueOptimistic의 openAt 체크는 이제 attemptIssue 안(CouponIssueAttempter)에서 일어나므로,
+        // CouponService가 아니라 CouponIssueAttempter 쪽에 fixedClock을 넣어야 한다.
+        val attempterWithFixedClock = CouponIssueAttempter(couponCampaignRepository, couponIssueRepository, fixedClock)
         val serviceWithFixedClock =
-            CouponService(couponCampaignRepository, couponTemplateRepository, couponIssueRepository, fixedClock)
+            CouponService(couponCampaignRepository, couponTemplateRepository, couponIssueAttempter = attempterWithFixedClock)
         val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 0, openAt = openAt)
         `when`(couponCampaignRepository.findById(1L)).thenReturn(Optional.of(campaign))
 
@@ -280,31 +286,12 @@ class CouponServiceTest {
     }
 
     @Test
-    fun `issueOptimistic - 버전 충돌이 1회 발생해도 재시도로 결국 성공한다`() {
-        val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 0)
-        `when`(couponCampaignRepository.findById(1L)).thenReturn(Optional.of(campaign))
-        `when`(couponIssueRepository.existsByCouponCampaignIdAndUserId(1L, 100L)).thenReturn(false)
-        `when`(couponCampaignRepository.save(campaign)).thenReturn(campaign)
-        val savedIssue = CouponIssue(couponCampaignId = 1L, userId = 100L)
-        `when`(couponIssueRepository.save(any(CouponIssue::class.java))).thenReturn(savedIssue)
-        doThrow(ObjectOptimisticLockingFailureException(CouponCampaign::class.java, 1L))
-            .doNothing()
-            .`when`(couponCampaignRepository).flush()
-
-        val result = couponService.issueOptimistic(1L, 100L)
-
-        assertEquals(100L, result.userId)
-        assertEquals(1, campaign.issuedQuantity)
-        verify(couponIssueRepository, times(1)).save(any(CouponIssue::class.java))
-    }
-
-    @Test
     fun `issueOptimistic - 재시도를 다 써도 계속 충돌하면 CouponIssueConflictException이 발생한다`() {
         val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 0)
         val serviceWithOneAttempt = CouponService(
             couponCampaignRepository,
             couponTemplateRepository,
-            couponIssueRepository,
+            couponIssueAttempter = couponIssueAttempter,
             optimisticMaxAttempts = 1,
         )
         `when`(couponCampaignRepository.findById(1L)).thenReturn(Optional.of(campaign))
