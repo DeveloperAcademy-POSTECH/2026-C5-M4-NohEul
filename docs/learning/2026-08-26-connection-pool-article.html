@@ -1,0 +1,565 @@
+<title>커넥션 풀의 함정</title>
+<style>
+  :root {
+    --bg: #F5F5F7;
+    --surface: #FFFFFF;
+    --surface-2: #FBFBFD;
+    --text: #1D1D1F;
+    --text-secondary: #4B4B4E;
+    --text-tertiary: #86868B;
+    --border: rgba(0,0,0,0.08);
+    --shadow: rgba(0,0,0,0.08);
+
+    --blue: #0071E3;
+    --blue-soft: #EAF3FE;
+    --blue-line: rgba(0,113,227,0.28);
+
+    --orange: #C2680A;
+    --orange-soft: #FFF4E5;
+    --orange-line: rgba(255,159,10,0.35);
+
+    --red: #D70015;
+    --red-soft: #FFEDEC;
+    --red-line: rgba(255,59,48,0.3);
+
+    --green: #1E7B34;
+    --green-soft: #E9FBEF;
+    --green-line: rgba(52,199,89,0.32);
+
+    --code-bg: rgba(0,0,0,0.045);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #000000;
+      --surface: #1C1C1E;
+      --surface-2: #161618;
+      --text: #F5F5F7;
+      --text-secondary: #C7C7CC;
+      --text-tertiary: #8E8E93;
+      --border: rgba(255,255,255,0.1);
+      --shadow: rgba(0,0,0,0.55);
+
+      --blue: #4DA3FF;
+      --blue-soft: rgba(10,132,255,0.16);
+      --blue-line: rgba(10,132,255,0.4);
+
+      --orange: #FFB340;
+      --orange-soft: rgba(255,159,10,0.16);
+      --orange-line: rgba(255,159,10,0.4);
+
+      --red: #FF6961;
+      --red-soft: rgba(255,69,58,0.16);
+      --red-line: rgba(255,69,58,0.4);
+
+      --green: #63DE83;
+      --green-soft: rgba(48,209,88,0.16);
+      --green-line: rgba(48,209,88,0.4);
+
+      --code-bg: rgba(255,255,255,0.08);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #000000;
+    --surface: #1C1C1E;
+    --surface-2: #161618;
+    --text: #F5F5F7;
+    --text-secondary: #C7C7CC;
+    --text-tertiary: #8E8E93;
+    --border: rgba(255,255,255,0.1);
+    --shadow: rgba(0,0,0,0.55);
+
+    --blue: #4DA3FF;
+    --blue-soft: rgba(10,132,255,0.16);
+    --blue-line: rgba(10,132,255,0.4);
+
+    --orange: #FFB340;
+    --orange-soft: rgba(255,159,10,0.16);
+    --orange-line: rgba(255,159,10,0.4);
+
+    --red: #FF6961;
+    --red-soft: rgba(255,69,58,0.16);
+    --red-line: rgba(255,69,58,0.4);
+
+    --green: #63DE83;
+    --green-soft: rgba(48,209,88,0.16);
+    --green-line: rgba(48,209,88,0.4);
+
+    --code-bg: rgba(255,255,255,0.08);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 72px 20px 120px;
+  }
+
+  code {
+    font-family: ui-monospace, "SF Mono", "Menlo", "D2Coding", monospace;
+    font-size: 0.9em;
+    background: var(--code-bg);
+    border-radius: 6px;
+    padding: 1px 7px;
+  }
+
+  article {
+    width: 100%;
+    max-width: 640px;
+  }
+
+  header.hero {
+    margin-bottom: 56px;
+  }
+
+  .eyebrow {
+    font-size: 13px;
+    font-weight: 650;
+    letter-spacing: 0.08em;
+    color: var(--blue);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-size: clamp(32px, 5vw, 44px);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin: 0 0 16px;
+    text-wrap: balance;
+  }
+
+  .dek {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  h2 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 64px 0 18px;
+    text-wrap: balance;
+  }
+
+  h2 .num {
+    color: var(--text-tertiary);
+    font-weight: 650;
+    margin-right: 10px;
+  }
+
+  p {
+    font-size: 17px;
+    line-height: 1.75;
+    color: var(--text);
+    margin: 0 0 20px;
+    max-width: 62ch;
+  }
+
+  p.lead {
+    font-size: 19px;
+    color: var(--text-secondary);
+  }
+
+  strong { font-weight: 650; }
+
+  .callout {
+    margin: 28px 0;
+    padding: 20px 24px;
+    border-radius: 16px;
+    font-size: 16px;
+    line-height: 1.6;
+    border: 1px solid var(--blue-line);
+    background: var(--blue-soft);
+    color: var(--text);
+  }
+
+  .callout .label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 8px;
+  }
+
+  /* ---------- Diagram block ---------- */
+  .diagram {
+    margin: 40px 0 48px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    box-shadow: 0 10px 30px var(--shadow);
+    padding: 32px 28px;
+  }
+
+  .diagram-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 650;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .chip-neutral {
+    background: var(--surface-2);
+    border-color: var(--border);
+    color: var(--text-secondary);
+  }
+
+  .chip-orange {
+    background: var(--orange-soft);
+    border-color: var(--orange-line);
+    color: var(--orange);
+  }
+
+  .chip-red {
+    background: var(--red-soft);
+    border-color: var(--red-line);
+    color: var(--red);
+  }
+
+  .chip-green {
+    background: var(--green-soft);
+    border-color: var(--green-line);
+    color: var(--green);
+  }
+
+  .arrow-down {
+    color: var(--text-tertiary);
+    font-size: 20px;
+    line-height: 1;
+    margin: 4px 0;
+  }
+
+  .pool-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--orange-soft);
+    border: 1px solid var(--orange-line);
+    border-radius: 18px;
+    padding: 20px;
+    margin: 6px 0;
+  }
+
+  .pool-card .pool-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--orange);
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  .sockets {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+
+  .socket {
+    aspect-ratio: 1;
+    border-radius: 9px;
+    background: var(--orange);
+    opacity: 0.85;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .socket svg { width: 55%; height: 55%; color: white; }
+
+  .queued-note {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-tertiary);
+    margin-top: 12px;
+  }
+
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  @media (max-width: 480px) {
+    .split { grid-template-columns: 1fr; }
+  }
+
+  .split-card {
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+
+  .split-card.blocked {
+    border-color: var(--red-line);
+    background: var(--red-soft);
+  }
+
+  .split-card .split-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+  }
+
+  .split-card.blocked .split-label { color: var(--red); }
+
+  .split-card .split-body {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .vs-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  .vs-card {
+    flex: 1;
+    border-radius: 14px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    text-align: center;
+    font-size: 13px;
+  }
+
+  .vs-card .vs-icon { font-size: 20px; margin-bottom: 6px; }
+  .vs-card .vs-title { font-weight: 700; margin-bottom: 4px; }
+  .vs-card .vs-body { color: var(--text-tertiary); line-height: 1.5; }
+
+  .vs-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-tertiary);
+  }
+
+  /* ---------- Comparison table (scope section) ---------- */
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 32px 0 8px;
+  }
+
+  @media (max-width: 480px) {
+    .compare { grid-template-columns: 1fr; }
+  }
+
+  .compare-col {
+    border-radius: 18px;
+    padding: 20px 20px 22px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: 0 6px 18px var(--shadow);
+  }
+
+  .compare-col h3 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+  .dot-blue { background: var(--blue); }
+  .dot-orange { background: var(--orange); }
+
+  .compare-col ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .compare-col li {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    padding-left: 14px;
+    position: relative;
+  }
+
+  .compare-col li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 7px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--text-tertiary);
+  }
+
+  .conclusion {
+    margin-top: 64px;
+    padding: 28px 26px;
+    border-radius: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 24px var(--shadow);
+  }
+
+  .conclusion h2 { margin-top: 0; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-tertiary);
+  }
+</style>
+
+<article>
+  <header class="hero">
+    <div class="eyebrow">coffee-coupon-api · 분산 락 학습</div>
+    <h1>커넥션 풀의 함정</h1>
+    <p class="dek">비관적 락도, 낙관적 락도 서버가 몇 대든 정확하게 작동한다. 그런데도 분산 락이 필요한 이유는, 정확성이 아니라 전혀 다른 곳에 있다.</p>
+  </header>
+
+  <p class="lead">쿠폰 발급 프로젝트에 비관적 락(<code>FOR UPDATE</code>)과 낙관적 락(<code>@Version</code>)을 차례로 구현하고 나면 자연스럽게 이런 질문이 떠오른다. 이 두 락 모두 서버가 몇 대이든 상관없이 정확하게 동작한다는 걸 이미 확인했는데, 그렇다면 분산 락(Redis)은 대체 왜 필요한가?</p>
+
+  <h2><span class="num">1</span>정확성은 이미 보장돼 있다</h2>
+
+  <p><code>@Version</code>은 JVM 메모리가 아니라 DB row의 컬럼이고, 버전 충돌 체크(<code>UPDATE ... WHERE version = ?</code>)도 DB 안에서 일어난다. 서버가 몇 대든 결국 같은 row를 보는 이상 결과는 동일하다. <code>FOR UPDATE</code>도 마찬가지로 DB가 직접 거는 락이라 서버 대수와 무관하다.</p>
+
+  <p>즉 "여러 서버가 동시에 쓰기 때문에 데이터가 꼬인다"는 걱정은, DB 트랜잭션 락만으로 이미 해결되어 있다. 분산 락을 붙이는 진짜 이유는 다른 데 있다.</p>
+
+  <h2><span class="num">2</span>진짜 이유 — 자원 격리</h2>
+
+  <p>비관적 락에서 충돌한 요청은 <code>SELECT ... FOR UPDATE</code>가 리턴할 때까지 <strong>DB 커넥션을 붙잡은 채로</strong> 대기한다. 재고 1개짜리 인기 쿠폰에 1,000명이 동시에 몰리면, 999명이 커넥션 풀(기본 10개)의 빈자리를 놓고 계속 대기하며 풀을 고갈시킨다.</p>
+
+  <div class="diagram">
+    <div class="diagram-title">1,000명이 동시에 요청했을 때</div>
+    <div class="flow">
+      <div class="flow-row">
+        <span class="chip chip-neutral">동시 요청 1,000개</span>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="pool-card">
+        <div class="pool-title">DB 커넥션 풀 (10개)</div>
+        <div class="sockets">
+          <div class="socket"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4v16M20 4v16M4 8h16M4 16h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="socket"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4v16M20 4v16M4 8h16M4 16h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="socket"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4v16M20 4v16M4 8h16M4 16h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="socket"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4v16M20 4v16M4 8h16M4 16h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="socket"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4v16M20 4v16M4 8h16M4 16h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="socket"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4v16M20 4v16M4 8h16M4 16h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="socket"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4v16M20 4v16M4 8h16M4 16h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="socket"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4v16M20 4v16M4 8h16M4 16h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="socket"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4v16M20 4v16M4 8h16M4 16h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="socket"><svg viewBox="0 0 24 24" fill="none"><path d="M4 4v16M20 4v16M4 8h16M4 16h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+        </div>
+        <div class="queued-note">10개 전부 점유됨 — 990명은 락 대기 중, 각자 커넥션 하나씩 붙든 채</div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="split">
+        <div class="split-card blocked">
+          <div class="split-label">GET /coupons/{id}</div>
+          <div class="split-body">이 쿠폰과 무관한 조회 요청인데도, 남은 커넥션이 없어서 함께 막힘</div>
+        </div>
+        <div class="split-card">
+          <div class="split-label">원인</div>
+          <div class="split-body">락 자체가 아니라 <strong>커넥션 풀 고갈</strong> — 애플리케이션 전체가 공유하는 자원</div>
+        </div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="vs-row">
+        <div class="vs-card">
+          <div class="vs-title" style="color: var(--orange)">DB 락의 대기</div>
+          <div class="vs-body">DB 커넥션을 붙잡은 채로 대기<br/>→ 커넥션 풀 소모</div>
+        </div>
+        <span class="vs-label">vs</span>
+        <div class="vs-card">
+          <div class="vs-title" style="color: var(--green)">Redis 락의 대기</div>
+          <div class="vs-body">완전히 별도 자원에서 대기<br/>→ DB 커넥션 풀에 영향 없음</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p>Redis 기반 분산 락은 이 "대기"를 DB가 아니라 완전히 별도의 저장소(Redis)에서 처리한다. 아무리 많은 요청이 락을 기다려도, DB 커넥션 풀에는 영향이 없다. 즉 비관적 락은 정확성은 보장하지만, 그 대가로 애플리케이션 전체가 공유하는 자원을 소모시킨다 — 분산 락은 그 대가를 없앤다.</p>
+
+  <h2><span class="num">3</span>또 다른 이유 — 범위</h2>
+
+  <p>지금까지 만든 락(<code>FOR UPDATE</code>, <code>@Version</code>)은 전부 DB의 특정 row를 두고 경쟁할 때 쓰는 도구다. 그런데 "여러 서버 중 하나만 배치 작업을 실행해야 한다" 같은 경우엔, 지키려는 대상이 row가 아니라 <strong>실행 권한</strong>이다 — 애초에 잠글 데이터가 없다.</p>
+
+  <div class="compare">
+    <div class="compare-col">
+      <h3><span class="dot dot-blue"></span>데이터 보호 (이 프로젝트)</h3>
+      <ul>
+        <li>잠글 대상이 명확함 — 쿠폰 재고라는 실제 row</li>
+        <li><code>FOR UPDATE</code> / <code>@Version</code>으로 충분</li>
+      </ul>
+    </div>
+    <div class="compare-col">
+      <h3><span class="dot dot-orange"></span>실행 권한 보호 (예: 배치 작업)</h3>
+      <ul>
+        <li>잠글 데이터가 없음 — N대 중 누가 실행할지만 결정하면 됨</li>
+        <li>Redis 락이나 MySQL <code>GET_LOCK()</code> 같은 별도 도구 필요</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="conclusion">
+    <h2 style="margin-top:0"><span class="num">4</span>정리</h2>
+    <p style="margin-bottom:0">이 프로젝트에서 분산 락을 붙이려는 진짜 동기는 <strong>2번(자원 격리)</strong>이다. 3번(배치 작업 실행 조율)은 이 프로젝트에 아직 존재하지 않는 시나리오라, "분산 락이 필요한 또 다른 이유도 있다"는 걸 보여주는 참고 사례에 가깝다.</p>
+  </div>
+
+  <footer>coffee-coupon-api · 이슈 #14 — 쿠폰 발급에 분산 락 적용</footer>
+</article>
