@@ -62,7 +62,10 @@ class CouponService(
         return couponIssueAttempter.saveIssue(couponCampaignId, userId)
     }
 
-    @Transactional
+    // @Transactional을 붙이지 않는다: 이 메서드는 재시도 루프와 예외 처리만 할 뿐 DB 작업이
+    // 전혀 없다. 여기 트랜잭션을 걸면 attemptIssue()의 REQUIRES_NEW가 매 시도마다 별도
+    // 커넥션을 추가로 요구하게 되어, 동시 요청이 (풀 크기 / 2)를 넘는 순간 각 요청이 자기 바깥
+    // 트랜잭션의 커넥션을 쥔 채 서로의 두 번째 커넥션을 기다리는 커넥션 풀 데드락이 발생한다.
     fun issueOptimistic(couponCampaignId: Long, userId: Long): CouponIssue {
         var lastException: ObjectOptimisticLockingFailureException? = null
         for (attempt in 1..optimisticMaxAttempts) {
