@@ -1,8 +1,0 @@
-# 선택 사항: docker-compose.yml의 MySQL 대신 직접 설치한 MySQL을 쓸 때만 필요하다.
-# 이 파일을 같은 디렉토리에 application-local.yaml로 복사하고 접속 정보를 입력하면
-# application.yaml의 기본값을 덮어쓴다(application-local.yaml은 gitignore 대상).
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/coffee_coupon?createDatabaseIfNotExist=true
-    username: root
-    password: your_password_here

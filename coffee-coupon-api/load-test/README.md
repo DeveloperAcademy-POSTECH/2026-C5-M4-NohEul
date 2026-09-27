@@ -15,7 +15,7 @@
 - k6 (`brew install k6`)
 - jq (`brew install jq`)
 - mysql CLI
-- 로컬 MySQL이 떠 있고 `coffee-coupon-api/src/main/resources/application-local.yaml`이 설정돼 있을 것 (README 루트의 설정 방법 참고)
+- MySQL이 떠 있고 앱이 거기에 연결될 것 (루트 README의 "실행 방법" 참고)
 - 네 전략이 `/api/coupons/{campaignId}/issue-<전략>` 형태의 별도 엔드포인트(`issue-no-lock`/`issue-pessimistic`/`issue-optimistic`/`issue-distributed`)로 앱에 존재해야 한다. 각 전략은 자기 브랜치에서 구현되지만 브랜치가 순차적으로 develop에 머지되므로(구현→머지 반복), 가장 최근에 머지된 브랜치에는 그때까지의 엔드포인트가 전부 함께 있다.
 
 ## 전략 하나를 검증하는 순서
@@ -57,7 +57,7 @@
 ## 결과 해석 시 주의
 
 - **왜 issuedQuantity가 아니라 실제 행 수로 판정하는가**: `CouponService.completeIssue`는 `campaign.issuedQuantity`를 요청 시작 시점에 읽어온 스냅샷에 `+1` 해서 그대로 저장한다. 두 요청이 동시에 같은 값(예: 1999)을 읽으면 둘 다 "1999 < 2000" 체크를 통과하고, 둘 다 자기 기준으로 2000을 계산해 덮어쓴다 — DB에는 결국 2000만 남지만(Lost Update), `CouponIssue` 행은 두 요청 모두 insert하므로 실제 발급 건수는 카운터보다 많아질 수 있다. `no-lock` 전략에서 실측한 예: 500 req/s × 10초 부하 후 `campaign.issuedQuantity`는 2,000(정상처럼 보임)이었지만 `coupon_issue` 실제 행 수는 2,214건이었다(214장 과발급, 카운터가 이를 숨기고 있었음). 그래서 `verify.sh`는 반드시 `coupon_issue` 테이블을 직접 세어서 판정한다.
-- **DB 커넥션 풀**: `application-local.yaml`의 Hikari 풀 크기가 네 가지 모두에 동일하게 적용되는 조건이다. 실측 처리량이 6,000 req/s에 못 미쳐도 그게 "락 자체의 한계"인지 "커넥션 풀 크기의 한계"인지는 이 표만으로는 구분 안 된다. 절대 수치보다 **네 가지 간 상대 비교**에 집중한다.
+- **DB 커넥션 풀**: 앱의 Hikari 커넥션 풀 크기(기본값 10)가 네 가지 모두에 동일하게 적용되는 조건이다. 실측 처리량이 6,000 req/s에 못 미쳐도 그게 "락 자체의 한계"인지 "커넥션 풀 크기의 한계"인지는 이 표만으로는 구분 안 된다. 절대 수치보다 **네 가지 간 상대 비교**에 집중한다.
 - **낙관적 락의 언더셀**: 재시도 로직 없이 구현했다면 `issuedQuantity`가 2,000에 못 미치는 채로 끝날 수 있다. 이건 과발급이 아니라 낙관적 락의 특성이므로 "과발급" 칸에는 "없음"으로 적고, 비고에 언더셀 수치를 남긴다.
 - **처리량/지연시간은 판정에 안 쓴다**: k6 요약의 처리량(req/s)·p95 등은 비고 칸에 참고용으로 기록만 한다. 이번 하네스의 PASS/FAIL은 정합성(과발급 여부)만으로 결정한다.
 

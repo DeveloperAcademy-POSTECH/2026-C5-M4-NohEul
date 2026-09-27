@@ -5,7 +5,7 @@ spring:
     active: local
   # 기본값은 루트의 docker-compose.yml MySQL과 일치하는 로컬 개발 전용 값이다.
   # 운영 환경에서는 반드시 환경 변수로 실제 접속 정보를 주입한다.
-  # 다른 DB를 쓰려면 환경 변수(DB_URL/DB_USERNAME/DB_PASSWORD)나 application-local.yaml로 덮어쓴다.
+  # 다른 DB를 쓰려면 환경 변수(DB_URL/DB_USERNAME/DB_PASSWORD)나 application-local.yaml(gitignore 대상)로 덮어쓴다.
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/coffee_coupon?createDatabaseIfNotExist=true}
     username: ${DB_USERNAME:root}

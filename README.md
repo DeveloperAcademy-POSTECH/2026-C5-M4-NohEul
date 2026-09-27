@@ -50,7 +50,14 @@
 
 > 이 비밀번호는 로컬 개발 전용 공개 값입니다. compose MySQL은 `127.0.0.1`에만 열려 같은 네트워크의 다른 기기에서는 접속할 수 없습니다. 운영 환경에서는 반드시 환경 변수로 실제 접속 정보를 주입하세요.
 
-직접 설치한 MySQL을 쓰려면 환경 변수 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`를 지정하거나, `application-local.yaml.example`을 `application-local.yaml`로 복사해 접속 정보를 입력하세요.
+직접 설치한 MySQL을 쓰려면 환경 변수로 접속 정보를 지정하세요.
+
+```bash
+export DB_URL='jdbc:mysql://localhost:3306/coffee_coupon?createDatabaseIfNotExist=true'
+export DB_PASSWORD='<내 MySQL 비밀번호>'
+```
+
+매번 export하기 번거로우면 `coffee-coupon-api/src/main/resources/application-local.yaml`(gitignore 대상)에 `spring.datasource.*` 값을 적어두면 기본값을 덮어씁니다.
 
 ### 1. MySQL 실행
 
