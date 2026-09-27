@@ -39,23 +39,105 @@
 
 ## 실행 방법
 
+모든 명령은 저장소 루트에서 실행합니다.
+
 ### 사전 준비
 
 - JDK 17
-- MySQL 실행 후 `coffee-coupon-api/src/main/resources/application-local.yaml.example`을 같은 디렉토리에 `application-local.yaml`로 복사하고 실제 MySQL 접속 정보(비밀번호 등)를 입력하세요.
+- Docker (MySQL 실행용)
 
-### 실행
+앱과 테스트 모두 MySQL이 필요합니다. 기본 접속 정보(`localhost:3306`, `root` / `coffee`, DB `coffee_coupon`)는 `docker-compose.yml`과 맞춰져 있어 별도 설정 없이 동작합니다.
+직접 설치한 MySQL을 쓰려면 환경 변수 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`를 지정하거나, `application-local.yaml.example`을 `application-local.yaml`로 복사해 접속 정보를 입력하세요.
+
+### 1. MySQL 실행
 
 ```bash
-cd coffee-coupon-api
-./gradlew bootRun
+docker compose up -d --wait
 ```
+
+로컬에 이미 MySQL이 떠 있어 3306이 사용 중이면 포트를 바꿔 띄우고, 앱에도 같은 포트를 알려주세요.
+
+```bash
+MYSQL_PORT=3307 docker compose up -d --wait
+export DB_URL='jdbc:mysql://localhost:3307/coffee_coupon?createDatabaseIfNotExist=true'
+```
+
+### 2. 앱 실행
+
+```bash
+cd coffee-coupon-api && ./gradlew bootRun
+```
+
+첫 기동 시 테이블이 자동 생성됩니다(`ddl-auto: update`).
+
+### 3. 헬스체크
+
+```bash
+curl http://localhost:8080/actuator/health
+# {"groups":["liveness","readiness"],"status":"UP"}
+```
+
+### 4. 테스트 데이터 넣기
+
+캠페인 생성 API는 의도적으로 두지 않았습니다. 재고 2,000장, 이미 오픈된 캠페인을 SQL로 만듭니다(앱을 한 번 기동해 테이블이 생긴 뒤 실행).
+
+```bash
+docker compose exec -T mysql mysql --default-character-set=utf8mb4 -uroot -pcoffee coffee_coupon < coffee-coupon-api/load-test/seed.sql
+# campaign_id
+# 1
+```
+
+### 5. API 호출
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| `GET` | `/api/coupons/{couponId}` | 발급 현황 조회 (총 수량 / 발급 수량 / 잔여 수량) |
+| `POST` | `/api/coupons/{couponId}/issue-no-lock` | 발급 — 락 없음 (대조군, 동시 요청 시 과발급 가능) |
+| `POST` | `/api/coupons/{couponId}/issue-pessimistic` | 발급 — 비관적 락 (`SELECT ... FOR UPDATE`) |
+| `POST` | `/api/coupons/{couponId}/issue-optimistic` | 발급 — 낙관적 락 (`@Version` + 재시도) |
+
+발급 요청 body는 `{"userId": <Long>}`입니다. 인증은 없고, 같은 `userId`는 캠페인당 한 번만 발급됩니다.
+
+```bash
+curl -X POST http://localhost:8080/api/coupons/1/issue-pessimistic \
+  -H 'Content-Type: application/json' -d '{"userId": 1}'
+
+curl http://localhost:8080/api/coupons/1
+```
+
+| 상황 | HTTP | `code` |
+| --- | --- | --- |
+| 발급 성공 | 200 | - |
+| 오픈 전 | 403 | `COUPON_NOT_YET_OPEN` |
+| 캠페인 없음 | 404 | `COUPON_NOT_FOUND` |
+| 재고 소진 | 409 | `COUPON_SOLD_OUT` |
+| 중복 발급 | 409 | `DUPLICATE_ISSUE` |
+| 낙관적 락 재시도 소진 | 409 | `COUPON_ISSUE_CONFLICT` |
+
+### API 문서 (Swagger)
+
+앱 실행 중 아래 주소에서 요청/응답 스키마를 보고 직접 호출해볼 수 있습니다.
+
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- OpenAPI JSON: http://localhost:8080/v3/api-docs
 
 ### 테스트
 
 ```bash
-cd coffee-coupon-api
-./gradlew test
+docker compose up -d --wait   # 테스트도 실제 MySQL에 연결합니다
+cd coffee-coupon-api && ./gradlew test
+```
+
+H2 같은 인메모리 DB를 쓰지 않는 이유: 비관적 락(`FOR UPDATE`)과 REPEATABLE READ 스냅샷처럼 MySQL(InnoDB) 동작에 의존하는 테스트가 있기 때문입니다.
+
+### 부하테스트
+
+락 전략별 과발급 여부를 k6로 비교하는 방법은 [coffee-coupon-api/load-test/README.md](coffee-coupon-api/load-test/README.md)를 참고하세요.
+
+### 정리
+
+```bash
+docker compose down -v   # 컨테이너와 데이터 삭제
 ```
 
 ## 브랜치 전략
