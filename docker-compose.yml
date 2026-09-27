@@ -1,0 +1,16 @@
+# 로컬 개발·테스트용 MySQL.
+# 접속 정보는 coffee-coupon-api/src/main/resources/application.yaml의 기본값과 일치한다.
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: coffee-coupon-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: coffee
+      MYSQL_DATABASE: coffee_coupon
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pcoffee"]
+      interval: 5s
+      timeout: 3s
+      retries: 20

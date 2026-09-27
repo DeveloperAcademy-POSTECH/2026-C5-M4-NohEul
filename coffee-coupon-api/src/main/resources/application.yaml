@@ -3,3 +3,20 @@ spring:
     name: coffee-coupon-api
   profiles:
     active: local
+  # 기본값은 루트의 docker-compose.yml MySQL과 일치한다.
+  # 다른 DB를 쓰려면 환경 변수(DB_URL/DB_USERNAME/DB_PASSWORD)나 application-local.yaml로 덮어쓴다.
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/coffee_coupon?createDatabaseIfNotExist=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:coffee}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
