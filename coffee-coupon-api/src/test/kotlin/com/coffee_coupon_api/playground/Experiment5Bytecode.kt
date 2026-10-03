@@ -2,7 +2,7 @@ package com.coffee_coupon_api.playground
 
 import kotlin.concurrent.thread
 
-// 실험 4. synchronized는 바이트코드에서 어떻게 보일까?
+// 실험 5. synchronized는 바이트코드에서 어떻게 보일까?
 // 이 클래스의 inc()를 바이트코드로 열어서 monitorenter / monitorexit을 찾아본다.
 class SyncCounter {
     private val lock = Any()

@@ -2,7 +2,7 @@ package com.coffee_coupon_api.playground
 
 import kotlin.concurrent.thread
 
-// 실험 3 덤. 재진입(reentrant)
+// 실험 4. 재진입(reentrant)
 // 깃발을 이미 쥔 스레드가 같은 깃발을 한 번 더 요청하면, 스스로 막힐까?
 fun main() {
     val lock = Any()

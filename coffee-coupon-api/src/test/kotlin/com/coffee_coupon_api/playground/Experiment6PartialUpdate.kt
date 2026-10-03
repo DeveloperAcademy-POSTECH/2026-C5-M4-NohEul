@@ -2,7 +2,7 @@ package com.coffee_coupon_api.playground
 
 import kotlin.concurrent.thread
 
-// 실험 5. 락은 풀렸는데 데이터는 깨질 수 있을까?
+// 실험 6. 락은 풀렸는데 데이터는 깨질 수 있을까?
 // A에서 100을 빼고 B에 100을 더하는 "이체"를 synchronized로 감싼다.
 // 빼고 나서 더하기 전에 예외를 던지면, 락은 풀려도 a + b의 합(1000)이 유지될까?
 private var a = 1000
