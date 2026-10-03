@@ -7,8 +7,10 @@ import kotlin.concurrent.thread
 private var count = 0
 
 fun main() {
-    val t1 = thread { repeat(100_000) { count++ } }
-    val t2 = thread { repeat(100_000) { count++ } }
+    val lock1 = Any()
+    val lock2 = Any()
+    val t1 = thread { repeat(100_000) {synchronized(lock1) { count++ }} }
+    val t2 = thread { repeat(100_000) {synchronized(lock2) { count++ }} }
     t1.join(); t2.join()
     println("count = $count")   // 예측: 200,000?
 }
