@@ -10,7 +10,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.locks.ReentrantLock
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -34,8 +33,7 @@ class ScratchJvmLockExperimentTest {
     // ---------- 결과: 재고 1장, 30명, 5라운드 ----------
 
     @Test
-    fun `E0~E4 라운드별 성공 수`() {
-        val reentrantLock = ReentrantLock()
+    fun `E0~E3 라운드별 성공 수`() {
         val lockInsideTx = Any()
         val lockA = Any()
         val lockB = Any()
@@ -43,11 +41,7 @@ class ScratchJvmLockExperimentTest {
         runRounds("E0 락 없음") { id, user -> couponService.issueNoLock(id, user) }
         runRounds("E1 트랜잭션 안 synchronized") { id, user -> txBeans.lockInsideTx(lockInsideTx, id, user, log = null) }
         runRounds("E2 트랜잭션 밖 synchronized") { id, user -> synchronizedCouponIssuer.issue(id, user) }
-        runRounds("E3 트랜잭션 밖 ReentrantLock") { id, user ->
-            reentrantLock.lock()
-            try { processor.issue(id, user) } finally { reentrantLock.unlock() }
-        }
-        runRounds("E4 락 객체 두 개") { id, user ->
+        runRounds("E3 락 객체 두 개") { id, user ->
             val lock = if (user % 2 == 0L) lockA else lockB   // 서버 두 대처럼 절반씩 다른 락
             synchronized(lock) { processor.issue(id, user) }
         }
