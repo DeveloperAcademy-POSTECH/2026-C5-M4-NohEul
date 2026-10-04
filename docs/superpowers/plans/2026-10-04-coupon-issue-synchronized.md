@@ -25,18 +25,18 @@
 **Files:**
 - Modify: `coffee-coupon-api/src/test/kotlin/com/coffee_coupon_api/service/CouponServiceConcurrencyTest.kt`
 
-- [ ] `SynchronizedCouponIssuer`를 주입받고, 재고 1장 캠페인에 30명이 동시에 `issue`를 호출하면 성공 1명, 실패 29명, `issuedQuantity` = 1인지 확인하는 테스트를 추가한다. 기존 `seedOpenCampaign`, `runConcurrently`를 그대로 쓴다.
-- [ ] 실행해서 컴파일 에러(클래스 없음)로 실패하는지 확인한다.
-- [ ] 커밋: `test: synchronized 동시성 테스트 추가`
+- [x] `SynchronizedCouponIssuer`를 주입받고, 재고 1장 캠페인에 30명이 동시에 `issue`를 호출하면 성공 1명, 실패 29명, `issuedQuantity` = 1인지 확인하는 테스트를 추가한다. 기존 `seedOpenCampaign`, `runConcurrently`를 그대로 쓴다.
+- [x] 실행해서 컴파일 에러(클래스 없음)로 실패하는지 확인한다.
+- [x] 커밋: `test: synchronized 동시성 테스트 추가`
 
 ## Task 2: `SynchronizedCouponIssueProcessor`
 
 **Files:**
 - Create: `coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/service/SynchronizedCouponIssueProcessor.kt`
 
-- [ ] `@Service` + `@Transactional fun issue(couponCampaignId, userId): CouponIssue`
-- [ ] 흐름: `findById` → 오픈 시각(`Clock`) → `existsByCouponCampaignIdAndUserId` → 재고 확인 → `incrementIssuedQuantityRaw` → `CouponIssue` 저장. 예외는 기존 예외 클래스를 그대로 쓴다.
-- [ ] 커밋: `feat: synchronized 발급 흐름(Processor) 추가`
+- [x] `@Service` + `@Transactional fun issue(couponCampaignId, userId): CouponIssue`
+- [x] 흐름: `findById` → 오픈 시각(`Clock`) → `existsByCouponCampaignIdAndUserId` → 재고 확인 → `incrementIssuedQuantityRaw` → `CouponIssue` 저장. 예외는 기존 예외 클래스를 그대로 쓴다.
+- [x] 커밋: `feat: synchronized 발급 흐름(Processor) 추가`
 
 ## Task 3: `SynchronizedCouponIssuer` + 저장소 주석
 
@@ -44,10 +44,10 @@
 - Create: `coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/service/SynchronizedCouponIssuer.kt`
 - Modify: `coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/repository/CouponCampaignRepository.kt`
 
-- [ ] 트랜잭션 없는 `@Service`. `private val locks = ConcurrentHashMap<Long, Any>()`, `computeIfAbsent(couponCampaignId) { Any() }`로 락을 얻고 `synchronized(lock) { processor.issue(...) }`.
-- [ ] `incrementIssuedQuantityRaw` 주석의 "issueNoLock 전용"을 "락 없음·synchronized 전용"으로 고친다.
-- [ ] Task 1 테스트가 통과하는지 확인한다. 기존 동시성 테스트도 함께 통과해야 한다.
-- [ ] 커밋: `feat: 캠페인별 synchronized 락(Issuer) 추가`
+- [x] 트랜잭션 없는 `@Service`. `private val locks = ConcurrentHashMap<Long, Any>()`, `computeIfAbsent(couponCampaignId) { Any() }`로 락을 얻고 `synchronized(lock) { processor.issue(...) }`.
+- [x] `incrementIssuedQuantityRaw` 주석의 "issueNoLock 전용"을 "락 없음·synchronized 전용"으로 고친다.
+- [x] Task 1 테스트가 통과하는지 확인한다. 기존 동시성 테스트도 함께 통과해야 한다.
+- [x] 커밋: `feat: 캠페인별 synchronized 락(Issuer) 추가`
 
 ## Task 4: 엔드포인트
 
