@@ -70,13 +70,15 @@ RATE=10 DURATION=2s coffee-coupon-api/load-test/run-all.sh    # 작게 먼저 �
 
 | 락 전략 | 성공(200) | 락에 의한 실패(403/409) | 인프라 오류(5xx/dropped) | 최종 issuedQuantity | 과발급 | 비고(처리량/p95 등) |
 |---|---|---|---|---|---|---|
-| **락 없음 (대조군)** | 2,008 | 2,984 | 0 | 2,008 | **있음 (8장)** | throughput≈480 req/s, avg 791ms, p95 1.71s |
-| 비관적 락 | 2,000 | 3,002 | 0 | 2,000 | 없음 | throughput≈500 req/s, avg 1.44s, p95 2.94s |
-| 낙관적 락 | 2,000 | 3,001 | 0 | 2,000 | 없음 | throughput≈500 req/s, avg 90ms, p95 311ms. 언더셀 없음(재시도로 전량 소진) |
-| synchronized (JVM 락) | - | - | - | - | 미실측 | 구현 완료 (`feature/coupon-issue-synchronized`), 측정 예정 |
-| 분산 락 | - | - | - | - | 미실측 | 미구현 (2026-08-27 기준, 스펙/계획만 존재: `docs/superpowers/plans/2026-08-26-coupon-issue-distributed-lock.md`) |
+| **락 없음 (대조군)** | 2,001 | 3,001 | 0 | 2,001 | **있음 (1장)** | throughput≈500 req/s, avg 3ms, p95 10ms |
+| 비관적 락 | 2,000 | 3,000 | 0 | 2,000 | 없음 | throughput≈500 req/s, avg 66ms, p95 244ms |
+| 낙관적 락 | 2,000 | 3,001 | 0 | 2,000 | 없음 | throughput≈500 req/s, avg 153ms, p95 355ms. 언더셀 없음(재시도로 전량 소진) |
+| synchronized (JVM 락) | 2,000 | 3,000 | 0 | 2,000 | 없음 | throughput≈488 req/s, avg 1.01s, p95 1.89s. 대기 VU 최대 912개 |
+| 분산 락 | - | - | - | - | 미실측 | 미구현 (스펙/계획만 존재: `docs/superpowers/plans/2026-08-26-coupon-issue-distributed-lock.md`) |
 
-측정 조건: `develop`(commit `883e343`), 로컬 단일 인스턴스, `RATE=500`(기본값), `DURATION=10s`(기본값), 2026-08-27. no-lock은 레이스 컨디션이 확률적이라 실행마다 결과가 달라질 수 있다. 같은 날 다른 실행에서는 과발급 없이 통과한 적도 있었다(위 표는 과발급이 실제로 재현된 실행의 기록).
+측정 조건: `feature/coupon-issue-synchronized`(commit `6f5be12`), 로컬 단일 인스턴스(앱은 IDE에서 직접 실행, MySQL 8.4는 docker-compose), `RATE=500`(기본값), `DURATION=10s`(기본값), `run-all.sh`로 네 전략을 연달아 측정, 2026-10-04. no-lock은 레이스 컨디션이 확률적이라 실행마다 과발급 수가 크게 달라진다.
+
+이전 측정(2026-08-27, `develop` commit `883e343`, 로컬 설치 MySQL): 락 없음 8장 과발급(avg 791ms), 비관적 락 avg 1.44s, 낙관적 락 avg 90ms. MySQL 실행 환경과 코드가 달라 위 표와 수치를 직접 비교하지 않는다.
 
 ## 결과 해석 시 주의
 
@@ -94,3 +96,4 @@ RATE=10 DURATION=2s coffee-coupon-api/load-test/run-all.sh    # 작게 먼저 �
 - `mysql`이 `Access denied for user 'root'`를 내면 `MYSQL_PWD`가 틀린 것이다. `application-local.yaml`에서 비밀번호를 읽었다면 따옴표까지 들어가지 않았는지 확인한다(`echo ${#MYSQL_PWD}`로 글자 수 확인).
 - 명령을 붙여넣었는데 `cmdsubst>`가 뜨고 멈추면 줄바꿈 때문에 `$( ... )`가 둘로 쪼개진 것이다. `Ctrl + C`로 취소하고 한 줄로 다시 붙여넣는다.
 - 앱을 재시작했더니 시딩한 캠페인이 사라졌다면 `ddl-auto: create` 설정 때문이다. 앱을 먼저 띄우고 그다음에 시딩한다.
+- `run-all.sh`가 "앱이 방금 시딩한 campaign을 찾지 못했습니다"로 멈추면, `mysql` 명령(시딩)과 앱이 서로 다른 DB를 보고 있는 것이다. 예: 앱은 docker MySQL을 보는데 `MYSQL_TCP_PORT`를 안 넣어 시딩이 로컬 MySQL(3306)로 간 경우. 이 상태로 측정하면 모든 요청이 404(인프라 오류)로 집계된다.
