@@ -68,11 +68,11 @@
 **Files:**
 - Create: `coffee-coupon-api/src/test/kotlin/com/coffee_coupon_api/service/ScratchJvmLockExperimentTest.kt`
 
-- [ ] assertion 없이 println만 남긴다(`ScratchRefreshSnapshotProbeTest`와 같은 방식).
-- [ ] E0 락 없음, E1 `@Transactional` 안 `synchronized`(테스트 전용 `open` 빈), E2 트랜잭션 바깥 `synchronized`, E3 `ReentrantLock`, E4 락 객체 두 개.
-- [ ] 결과: 재고 1장, 30명, 여러 라운드의 성공 수.
-- [ ] 원인: E1·E2는 스레드 3~5개로 "락 획득(읽은 재고) / 락 해제 / 커밋 완료" 순서를 찍는다. 커밋 시점은 `TransactionSynchronization.afterCommit`.
-- [ ] 커밋: `test: JVM 락 위치 실험 추가`
+- [x] assertion 없이 println만 남긴다(`ScratchRefreshSnapshotProbeTest`와 같은 방식).
+- [x] E0 락 없음, E1 `@Transactional` 안 `synchronized`(테스트 전용 `open` 빈), E2 트랜잭션 바깥 `synchronized`, E3 `ReentrantLock`, E4 락 객체 두 개.
+- [x] 결과: 재고 1장, 30명, 여러 라운드의 성공 수.
+- [x] 원인: E1·E2는 스레드 3~5개로 "락 획득(읽은 재고) / 락 해제 / 커밋 완료" 순서를 찍는다. 커밋 시점은 `TransactionSynchronization.afterCommit`.
+- [x] 커밋: `test: JVM 락 위치 실험 추가`
 
 ## Task 6: k6
 
