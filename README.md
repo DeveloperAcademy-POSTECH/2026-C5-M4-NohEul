@@ -18,7 +18,7 @@
 
 ## 발견한 문제와 해결
 
-- 락 없이 구현했을 때 카운터는 정상으로 보였지만 실제 발급 행이 재고를 초과 — 화면 결과만으로는 정합성을 보장할 수 없다는 걸 확인
+- 락 없이 구현했을 때 카운터는 정상으로 보였지만 실제 발급 행이 재고를 초과. 화면 결과만으로는 정합성을 보장할 수 없다는 걸 확인
 - 재시도 트랜잭션이 이전 트랜잭션과 얽혀 유령 행이 남고 재고가 초과 소모되는 문제 발견 → `REQUIRES_NEW`로 격리
 - 이 과정에서 생긴 커넥션 풀 고갈·타임아웃을 재시도 루프 구조에서 원인을 찾아 해결
 - AI가 제안한 `refresh()` 방식은 MySQL REPEATABLE READ 특성상 통하지 않는다는 걸 직접 실험으로 확인한 뒤 기각
@@ -106,9 +106,10 @@ docker compose exec -T mysql mysql --default-character-set=utf8mb4 -uroot -pcoff
 | Method | Path | 설명 |
 | --- | --- | --- |
 | `GET` | `/api/coupons/{couponId}` | 발급 현황 조회 (총 수량 / 발급 수량 / 잔여 수량) |
-| `POST` | `/api/coupons/{couponId}/issue-no-lock` | 발급 — 락 없음 (대조군, 동시 요청 시 과발급 가능) |
-| `POST` | `/api/coupons/{couponId}/issue-pessimistic` | 발급 — 비관적 락 (`SELECT ... FOR UPDATE`) |
-| `POST` | `/api/coupons/{couponId}/issue-optimistic` | 발급 — 낙관적 락 (`@Version` + 재시도) |
+| `POST` | `/api/coupons/{couponId}/issue-no-lock` | 발급: 락 없음 (대조군, 동시 요청 시 과발급 가능) |
+| `POST` | `/api/coupons/{couponId}/issue-pessimistic` | 발급: 비관적 락 (`SELECT ... FOR UPDATE`) |
+| `POST` | `/api/coupons/{couponId}/issue-optimistic` | 발급: 낙관적 락 (`@Version` + 재시도) |
+| `POST` | `/api/coupons/{couponId}/issue-synchronized` | 발급: synchronized (캠페인별 JVM 락, 단일 서버에서만 유효) |
 
 발급 요청 body는 `{"userId": <Long>}`입니다. 인증은 없고, 같은 `userId`는 캠페인당 한 번만 발급됩니다.
 
@@ -146,7 +147,13 @@ H2 같은 인메모리 DB를 쓰지 않는 이유: 비관적 락(`FOR UPDATE`)�
 
 ### 부하테스트
 
-락 전략별 과발급 여부를 k6로 비교하는 방법은 [coffee-coupon-api/load-test/README.md](coffee-coupon-api/load-test/README.md)를 참고하세요.
+락 전략별 과발급 여부를 k6로 비교합니다. 앱을 띄운 상태에서 아래 한 줄로 모든 전략을 차례로 측정할 수 있습니다.
+
+```bash
+coffee-coupon-api/load-test/run-all.sh
+```
+
+자세한 방법과 결과 해석은 [coffee-coupon-api/load-test/README.md](coffee-coupon-api/load-test/README.md)를 참고하세요.
 
 ### 정리
 
