@@ -107,7 +107,7 @@ services:
 | 부하테스트 스크립트 (`run-all.sh`, `verify.sh`) | `load-test/db-env.sh`가 루트 `.env`를 읽음. 이미 지정한 환경 변수가 있으면 그 값이 우선 |
 | 스프링 앱 (IDE 실행, 테스트) | `application.yaml` 기본값. `.env`를 읽지 않으므로 같은 값으로 맞춰 두고 주석으로 명시 |
 
-- `.env`는 공개된 개발용 값만 담으므로 커밋한다.
+- `.env`는 커밋하지 않고(gitignore) `.env.example`을 커밋한다. 지금 값은 공개된 개발용 값이지만, `.env`에 나중에 실제 비밀이 섞여 커밋되는 사고를 막는 관례를 따른다. 처음 한 번 `cp .env.example .env`가 필요하고, 안 하면 compose가 `${VAR:?}` 메시지로 바로 멈춘다.
 - compose는 `${MYSQL_PASSWORD:?...}`처럼 값이 없으면 바로 실패하게 해서, `.env`가 없을 때 빈 비밀번호로 뜨는 일을 막는다.
 - MySQL 헬스체크와 README 시드 명령은 비밀번호를 직접 쓰지 않고 컨테이너 안의 `MYSQL_ROOT_PASSWORD` 환경 변수를 쓴다.
 - 스프링까지 `.env`를 읽게 하는 방법(`spring.config.import`)은 IDE, Gradle 테스트, 컨테이너의 실행 폴더가 달라 경로가 꼬이기 쉬워 쓰지 않는다.

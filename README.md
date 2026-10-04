@@ -53,13 +53,14 @@
 - Docker
 - JDK 17 (IDE로 앱을 실행하거나 테스트를 돌릴 때만 필요)
 
-MySQL 설정(호스트 포트 `13306`, `root` / `coffee`, DB `coffee_coupon`)은 루트의 `.env` 한 곳에 있고, `docker-compose.yml`과 부하테스트 스크립트가 이 파일을 읽습니다. 스프링 앱은 `.env`를 읽지 않으므로 `application.yaml`의 기본값을 같은 값으로 맞춰 두었습니다. 그래서 별도 설정 없이 동작합니다. MySQL 호스트 포트를 13306으로 둔 이유는 로컬에 설치된 MySQL(3306)과 겹치지 않게 하기 위해서입니다.
+MySQL 설정(호스트 포트 `13306`, `root` / `coffee`, DB `coffee_coupon`)은 루트의 `.env` 한 곳에 있고(예시 `.env.example`을 복사해서 만듦), `docker-compose.yml`과 부하테스트 스크립트가 이 파일을 읽습니다. 스프링 앱은 `.env`를 읽지 않으므로 `application.yaml`의 기본값을 같은 값으로 맞춰 두었습니다. 그래서 별도 설정 없이 동작합니다. MySQL 호스트 포트를 13306으로 둔 이유는 로컬에 설치된 MySQL(3306)과 겹치지 않게 하기 위해서입니다.
 
 > 이 비밀번호는 로컬 개발 전용 공개 값입니다. compose의 포트는 `127.0.0.1`에만 열려 같은 네트워크의 다른 기기에서는 접속할 수 없습니다. 운영 환경에서는 반드시 환경 변수로 실제 접속 정보를 주입하세요.
 
 ### 1. 실행
 
 ```bash
+cp .env.example .env   # 처음 한 번만. 로컬 MySQL 설정(.env는 gitignore 대상)
 docker compose up -d --wait
 ```
 

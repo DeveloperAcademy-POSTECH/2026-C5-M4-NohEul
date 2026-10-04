@@ -1,4 +1,4 @@
-# 로컬 개발·테스트용 MySQL과 앱. 값은 같은 폴더의 .env에서 읽는다(공개된 개발용 값이므로 운영에 쓰지 않는다).
+# 로컬 개발·테스트용 MySQL과 앱. 값은 같은 폴더의 .env에서 읽는다(처음 한 번 cp .env.example .env).
 # 포트는 127.0.0.1에만 바인딩해 같은 네트워크의 다른 기기에서 접속할 수 없게 한다.
 # MySQL만 띄우려면: docker compose up -d --wait mysql
 services:
