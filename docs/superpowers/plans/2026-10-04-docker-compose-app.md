@@ -23,11 +23,11 @@
 - Create: `coffee-coupon-api/Dockerfile`
 - Create: `coffee-coupon-api/.dockerignore`
 
-- [ ] 스펙 1절의 멀티 스테이지 Dockerfile을 작성한다 (`eclipse-temurin:17-jdk` 빌드, `eclipse-temurin:17-jre` 실행, `bootJar -x test`).
-- [ ] 스펙 2절의 `.dockerignore`를 작성한다.
-- [ ] `docker build -t coffee-coupon-api coffee-coupon-api`가 성공하는지 확인한다.
-- [ ] 이미지의 jar에 `application-local.yaml`이 없는지 확인한다.
-- [ ] 커밋: `chore: 앱 Docker 이미지(멀티 스테이지) 추가`
+- [x] 스펙 1절의 멀티 스테이지 Dockerfile을 작성한다 (`eclipse-temurin:17-jdk` 빌드, `eclipse-temurin:17-jre` 실행, `bootJar -x test`).
+- [x] 스펙 2절의 `.dockerignore`를 작성한다.
+- [x] `docker build -t coffee-coupon-api coffee-coupon-api`가 성공하는지 확인한다.
+- [x] 이미지의 jar에 `application-local.yaml`이 없는지 확인한다.
+- [x] 커밋: `chore: 앱 Docker 이미지(멀티 스테이지) 추가`
 
 ## Task 2: compose `app` 서비스
 
