@@ -52,12 +52,16 @@
 ## Task 4: 엔드포인트
 
 **Files:**
+- Modify: `coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/service/CouponService.kt`
 - Modify: `coffee-coupon-api/src/main/kotlin/com/coffee_coupon_api/controller/CouponController.kt`
 - Modify: `coffee-coupon-api/src/test/kotlin/com/coffee_coupon_api/controller/CouponControllerTest.kt`
+- Modify: `coffee-coupon-api/src/test/kotlin/com/coffee_coupon_api/service/CouponServiceTest.kt`
 
-- [ ] `POST /api/coupons/{couponId}/issue-synchronized`. 요청/응답, 에러 코드는 다른 전략과 같다. `@Operation` 설명에 "단일 서버에서만 유효"를 적는다.
-- [ ] 정상 발급 컨트롤러 테스트를 추가하고 통과를 확인한다.
-- [ ] 커밋: `feat: issue-synchronized 엔드포인트 추가`
+- [x] 다른 전략과 진입점을 맞추려고 `CouponService.issueSynchronized()`를 추가한다. `SynchronizedCouponIssuer`에 넘기기만 하고, `@Transactional`은 붙이지 않는다(붙이면 안쪽 Processor가 합류해서 커밋이 락 해제 뒤로 밀린다).
+- [x] `POST /api/coupons/{couponId}/issue-synchronized`. 요청/응답, 에러 코드는 다른 전략과 같다. `@Operation` 설명에 "단일 서버에서만 유효"를 적는다.
+- [x] `CouponService` 생성자 파라미터가 늘어서, `CouponServiceTest`의 생성자 호출에 `SynchronizedCouponIssuer` 목을 넘긴다.
+- [x] 정상 발급 컨트롤러 테스트를 추가하고 통과를 확인한다.
+- [x] 커밋: `feat: issue-synchronized 엔드포인트 추가`
 
 ## Task 5: 스레드 실험
 
