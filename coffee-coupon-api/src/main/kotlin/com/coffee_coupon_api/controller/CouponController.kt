@@ -120,6 +120,37 @@ class CouponController(
         return couponService.issueOptimistic(couponId, request.userId).toResponse()
     }
 
+    @Operation(
+        summary = "쿠폰 발급 (synchronized, JVM 락)",
+        description = "지정한 쿠폰을 사용자에게 발급한다. 캠페인별 synchronized 락을 트랜잭션 바깥에서 잡아, " +
+            "커밋이 끝난 뒤에 락을 푼다. 락이 JVM 메모리에 있어서 단일 서버에서만 유효하다.",
+    )
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "발급 성공"),
+        ApiResponse(
+            responseCode = "403",
+            description = "아직 오픈되지 않은 쿠폰(COUPON_NOT_YET_OPEN)",
+            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+        ),
+        ApiResponse(
+            responseCode = "404",
+            description = "쿠폰을 찾을 수 없음",
+            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+        ),
+        ApiResponse(
+            responseCode = "409",
+            description = "쿠폰 소진(COUPON_SOLD_OUT) 또는 중복 발급(DUPLICATE_ISSUE)",
+            content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+        ),
+    )
+    @PostMapping("/{couponId}/issue-synchronized")
+    fun issueSynchronized(
+        @Parameter(description = "발급할 쿠폰 ID") @PathVariable couponId: Long,
+        @RequestBody request: CouponIssueRequest,
+    ): CouponIssueResponse {
+        return couponService.issueSynchronized(couponId, request.userId).toResponse()
+    }
+
     @Operation(summary = "쿠폰 조회", description = "쿠폰 ID로 쿠폰의 발급 현황(총 수량/발급 수량/잔여 수량)을 조회한다.")
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "조회 성공"),

@@ -103,6 +103,17 @@ class CouponControllerTest {
     }
 
     @Test
+    fun `issue-synchronized - 쿠폰을 정상적으로 발급받는다`() {
+        mockMvc.perform(
+            post("/api/coupons/${campaign.id}/issue-synchronized")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(mapOf("userId" to 1L))),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.userId").value(1))
+    }
+
+    @Test
     fun `존재하지 않는 쿠폰은 404를 반환한다`() {
         mockMvc.perform(
             post("/api/coupons/99999/issue-pessimistic")

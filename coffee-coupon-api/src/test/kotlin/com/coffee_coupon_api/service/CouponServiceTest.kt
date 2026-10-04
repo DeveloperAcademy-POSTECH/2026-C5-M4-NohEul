@@ -32,6 +32,7 @@ class CouponServiceTest {
     private lateinit var couponTemplateRepository: CouponTemplateRepository
     private lateinit var couponIssueRepository: CouponIssueRepository
     private lateinit var couponIssueAttempter: CouponIssueAttempter
+    private lateinit var synchronizedCouponIssuer: SynchronizedCouponIssuer
     private lateinit var couponService: CouponService
 
     @BeforeEach
@@ -42,7 +43,9 @@ class CouponServiceTest {
         // CouponIssueAttempter는 목이 아니라 실제 인스턴스를 씀 — completeIssue/ensureXxx 로직이
         // 이제 이 클래스 안에 있어서, 실제로 돌아야 기존 테스트들의 리포지토리 스텁이 그대로 유효함.
         couponIssueAttempter = CouponIssueAttempter(couponCampaignRepository, couponIssueRepository)
-        couponService = CouponService(couponCampaignRepository, couponTemplateRepository, couponIssueAttempter = couponIssueAttempter)
+        // 이 클래스는 synchronized 전략을 검사하지 않는다(그건 CouponServiceConcurrencyTest). 생성자를 채우기 위한 목.
+        synchronizedCouponIssuer = mock(SynchronizedCouponIssuer::class.java)
+        couponService = CouponService(couponCampaignRepository, couponTemplateRepository, couponIssueAttempter = couponIssueAttempter, synchronizedCouponIssuer = synchronizedCouponIssuer)
     }
 
     @Test
@@ -86,7 +89,7 @@ class CouponServiceTest {
         val threeSecondsBeforeOpen = openAt.minusSeconds(3).atZone(ZoneId.systemDefault()).toInstant()
         val fixedClock = Clock.fixed(threeSecondsBeforeOpen, ZoneId.systemDefault())
         val serviceWithFixedClock =
-            CouponService(couponCampaignRepository, couponTemplateRepository, fixedClock, couponIssueAttempter)
+            CouponService(couponCampaignRepository, couponTemplateRepository, fixedClock, couponIssueAttempter, synchronizedCouponIssuer)
         `when`(couponCampaignRepository.findOpenAtById(1L)).thenReturn(openAt)
 
         assertThrows(CouponNotYetOpenException::class.java) {
@@ -100,7 +103,7 @@ class CouponServiceTest {
         val exactlyOpenInstant = openAt.atZone(ZoneId.systemDefault()).toInstant()
         val fixedClock = Clock.fixed(exactlyOpenInstant, ZoneId.systemDefault())
         val serviceWithFixedClock =
-            CouponService(couponCampaignRepository, couponTemplateRepository, fixedClock, couponIssueAttempter)
+            CouponService(couponCampaignRepository, couponTemplateRepository, fixedClock, couponIssueAttempter, synchronizedCouponIssuer)
         val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 0, openAt = openAt)
         `when`(couponCampaignRepository.findOpenAtById(1L)).thenReturn(openAt)
         `when`(couponCampaignRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(campaign))
@@ -168,7 +171,7 @@ class CouponServiceTest {
         val threeSecondsBeforeOpen = openAt.minusSeconds(3).atZone(ZoneId.systemDefault()).toInstant()
         val fixedClock = Clock.fixed(threeSecondsBeforeOpen, ZoneId.systemDefault())
         val serviceWithFixedClock =
-            CouponService(couponCampaignRepository, couponTemplateRepository, fixedClock, couponIssueAttempter)
+            CouponService(couponCampaignRepository, couponTemplateRepository, fixedClock, couponIssueAttempter, synchronizedCouponIssuer)
         val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 0, openAt = openAt)
         `when`(couponCampaignRepository.findById(1L)).thenReturn(Optional.of(campaign))
 
@@ -254,7 +257,7 @@ class CouponServiceTest {
         // CouponService가 아니라 CouponIssueAttempter 쪽에 fixedClock을 넣어야 한다.
         val attempterWithFixedClock = CouponIssueAttempter(couponCampaignRepository, couponIssueRepository, fixedClock)
         val serviceWithFixedClock =
-            CouponService(couponCampaignRepository, couponTemplateRepository, couponIssueAttempter = attempterWithFixedClock)
+            CouponService(couponCampaignRepository, couponTemplateRepository, couponIssueAttempter = attempterWithFixedClock, synchronizedCouponIssuer = synchronizedCouponIssuer)
         val campaign = CouponCampaign(couponTemplateId = 1L, totalQuantity = 10, issuedQuantity = 0, openAt = openAt)
         `when`(couponCampaignRepository.findById(1L)).thenReturn(Optional.of(campaign))
 
@@ -292,6 +295,7 @@ class CouponServiceTest {
             couponCampaignRepository,
             couponTemplateRepository,
             couponIssueAttempter = couponIssueAttempter,
+            synchronizedCouponIssuer = synchronizedCouponIssuer,
             optimisticMaxAttempts = 1,
         )
         `when`(couponCampaignRepository.findById(1L)).thenReturn(Optional.of(campaign))
