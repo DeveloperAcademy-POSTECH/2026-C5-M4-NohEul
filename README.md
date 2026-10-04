@@ -158,7 +158,6 @@ export DB_URL='jdbc:mysql://localhost:3306/coffee_coupon?createDatabaseIfNotExis
 export DB_PASSWORD='<내 MySQL 비밀번호>'
 ```
 
-- 매번 export하기 번거로우면 `coffee-coupon-api/src/main/resources/application-local.yaml`(gitignore 대상)에 `spring.datasource.*` 값을 적어 둡니다. 단, 이 파일이 있으면 그 값이 `DB_URL`보다 우선합니다. 둘 다 이기려면 `SPRING_DATASOURCE_URL`/`SPRING_DATASOURCE_PASSWORD` 환경 변수를 씁니다.
 - compose MySQL의 포트나 비밀번호를 바꾸려면 `.env`를 고치고, `application.yaml`의 기본값도 같이 맞춥니다. 한 번만 바꿔 띄우려면 `MYSQL_PORT=<포트> docker compose up -d --wait`처럼 환경 변수로 덮어쓸 수도 있습니다(환경 변수가 `.env`보다 우선).
 - 부하테스트 스크립트(`verify.sh`, `run-all.sh`)의 `mysql` 명령은 기본으로 `.env`의 포트와 비밀번호를 씁니다. 다른 MySQL을 쓰면 `MYSQL_TCP_PORT`와 `MYSQL_PWD`를 함께 지정합니다.
 

@@ -94,7 +94,7 @@ services:
 | README, `load-test/README.md` | 기본 포트와 접속 예시를 13306으로 |
 
 - 앱 컨테이너는 내부 네트워크로 붙으므로 이 변경과 무관하다.
-- 직접 설치한 MySQL(3306)을 쓰고 싶으면 지금처럼 `DB_URL`이나 `application-local.yaml`, `MYSQL_TCP_PORT=3306`으로 지정한다.
+- 직접 설치한 MySQL(3306)을 쓰고 싶으면 `DB_URL` 등 환경 변수와 `MYSQL_TCP_PORT=3306`으로 지정한다.
 - 이미 떠 있는 compose MySQL 컨테이너는 포트 매핑이 바뀌므로 `docker compose up`이 다시 만든다. 데이터는 익명 볼륨이라 개발용으로 다시 시딩하면 된다.
 
 ## 4-1. 설정값을 루트 `.env`로 모으기 (2026-10-04 추가 결정)
@@ -111,6 +111,14 @@ services:
 - compose는 `${MYSQL_PASSWORD:?...}`처럼 값이 없으면 바로 실패하게 해서, `.env`가 없을 때 빈 비밀번호로 뜨는 일을 막는다.
 - MySQL 헬스체크와 README 시드 명령은 비밀번호를 직접 쓰지 않고 컨테이너 안의 `MYSQL_ROOT_PASSWORD` 환경 변수를 쓴다.
 - 스프링까지 `.env`를 읽게 하는 방법(`spring.config.import`)은 IDE, Gradle 테스트, 컨테이너의 실행 폴더가 달라 경로가 꼬이기 쉬워 쓰지 않는다.
+
+## 4-2. `application-local.yaml` 방식 제거 (2026-10-04 추가 결정)
+
+설정이 `.env`와 `application.yaml` 기본값, 필요할 때의 환경 변수로 충분해져서, 개인 프로필 파일을 읽던 방식을 없앤다.
+
+- `application.yaml`의 `spring.profiles.active: local`을 지운다. 이 설정은 `application-local.yaml`을 읽으려고 켜 둔 것이었다(컨테이너 로그에 `"local"`이 찍히던 이유).
+- 다른 DB는 `DB_URL`/`DB_USERNAME`/`DB_PASSWORD` 환경 변수로 지정한다. README와 주석에서 `application-local.yaml` 안내를 뺀다.
+- `.gitignore`, `.dockerignore`의 제외 줄은 남긴다. 누가 이 파일을 다시 만들어도 커밋되거나 이미지에 들어가지 않게 하는 안전장치다.
 
 ## 5. 실행 흐름 (README)
 
@@ -129,7 +137,6 @@ docker compose down -v
 - **부하테스트 수치**: 맥의 Docker Desktop은 가상 머신 위에서 돌아서, 앱을 컨테이너로 띄우면 지연과 처리량이 IDE 실행과 달라진다. 2026-10-04 결과 표(앱은 IDE 실행)와 직접 비교하지 않고, 측정할 때 실행 환경을 함께 적는다.
 - **첫 빌드가 느리다**: Gradle 배포판과 의존성을 이미지 안에서 처음 받는다. 두 번째부터는 레이어 캐시로 빨라진다.
 - **코드를 바꾸면 이미지를 다시 빌드해야 한다**: `docker compose up -d --build`. 개발 중 빠른 반복은 IDE 실행을 권장한다.
-- **개인 `application-local.yaml`**: 이 파일을 쓰는 PC는 파일의 url이 우선하므로, compose MySQL을 쓰려면 파일의 포트를 13306으로 맞추거나 파일을 치운다.
 
 ## 7. 검증
 
@@ -147,4 +154,4 @@ docker compose down -v
 - 앱 헬스체크: 추가 (`--wait`이 UP까지 대기)
 - 설정값: compose와 스크립트는 루트 `.env` 하나를 기준으로, 스프링은 `application.yaml` 기본값을 같은 값으로 맞춤
 - MySQL 데이터: 이름 있는 볼륨(`mysql-data`). `docker compose down`으로 내려도 데이터가 남고, 지우려면 `down -v`
-- `application-local.yaml`: `.dockerignore`로 이미지에서 제외
+- `application-local.yaml`: 방식 자체를 제거(`profiles.active: local` 삭제), 안전장치로 `.gitignore`와 `.dockerignore`의 제외는 유지

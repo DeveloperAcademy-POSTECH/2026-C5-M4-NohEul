@@ -48,10 +48,9 @@ RATE=10 DURATION=2s coffee-coupon-api/load-test/run-all.sh    # 작게 먼저 �
    STRATEGY=no-lock      # 이후 pessimistic → optimistic → synchronized 순으로 반복
    export MYSQL_TCP_PORT=13306 MYSQL_PWD=coffee   # docker-compose MySQL 기본값 (루트 .env와 같은 값)
    ```
-   직접 설치한 MySQL을 쓰고 있다면 그 MySQL의 포트와 비밀번호를 넣는다. 비밀번호를 `application-local.yaml`에서 읽는다면, yaml에 따옴표로 감싸져 있을 때 따옴표는 빼야 한다.
+   직접 설치한 MySQL을 쓰고 있다면 그 MySQL의 포트와 비밀번호를 넣는다.
    ```bash
-   export MYSQL_TCP_PORT=3306
-   export MYSQL_PWD=$(grep 'password:' coffee-coupon-api/src/main/resources/application-local.yaml | awk '{print $2}' | tr -d '"')
+   export MYSQL_TCP_PORT=3306 MYSQL_PWD='<내 MySQL 비밀번호>'
    ```
 3. 캠페인을 새로 시딩하고 `campaign_id`를 확보한다. **전략마다 매번 새로 시딩한다.** 이전 전략이 다 써버린 캠페인을 재사용하면 안 된다.
    ```bash
@@ -95,7 +94,6 @@ RATE=10 DURATION=2s coffee-coupon-api/load-test/run-all.sh    # 작게 먼저 �
 - `verify.sh`가 `FAIL: totalQuantity(...) != expected(2000)`을 내면 `seed.sql`이 제대로 안 돌았거나 다른 campaign_id를 잘못 넣은 것이다.
 - k6가 `dropped_iterations`를 많이 보고하면 `MAX_VUS`가 부족해서 목표 QPS를 못 낸 것이다. 이 자체도 그 락 전략이 해당 QPS를 못 버틴다는 신호이니 위 표의 "인프라 오류" 칸에 기록한다.
 - k6 요약에 404가 대량으로 찍히면 `STRATEGY` 값에 오타가 있거나(`no-lock`/`pessimistic`/`optimistic`/`synchronized`/`distributed` 중 하나여야 함), 그 전략의 엔드포인트를 추가한 브랜치가 아직 지금 체크아웃한 브랜치에 안 들어와 있는 것이다.
-- `mysql`이 `Access denied for user 'root'`를 내면 `MYSQL_PWD`가 틀린 것이다. `application-local.yaml`에서 비밀번호를 읽었다면 따옴표까지 들어가지 않았는지 확인한다(`echo ${#MYSQL_PWD}`로 글자 수 확인).
+- `mysql`이 `Access denied for user 'root'`를 내면 `MYSQL_PWD`가 틀린 것이다. 비밀번호를 파일에서 읽어 넣었다면 따옴표까지 들어가지 않았는지 확인한다(`echo ${#MYSQL_PWD}`로 글자 수 확인).
 - 명령을 붙여넣었는데 `cmdsubst>`가 뜨고 멈추면 줄바꿈 때문에 `$( ... )`가 둘로 쪼개진 것이다. `Ctrl + C`로 취소하고 한 줄로 다시 붙여넣는다.
-- `application-local.yaml`에 `ddl-auto: create`를 두고 쓰는 경우, 앱을 재시작하면 테이블이 새로 만들어져 시딩한 캠페인이 사라진다. 앱을 먼저 띄우고 그다음에 시딩한다. (기본값 `update`에서는 사라지지 않는다)
 - `run-all.sh`가 "앱이 방금 시딩한 campaign을 찾지 못했습니다"로 멈추면, `mysql` 명령(시딩)과 앱이 서로 다른 DB를 보고 있는 것이다. 예: 앱은 직접 설치한 MySQL(3306)을 보는데 `MYSQL_TCP_PORT`를 안 넣어 시딩이 기본값인 docker-compose MySQL(13306)로 간 경우. 이 상태로 측정하면 모든 요청이 404(인프라 오류)로 집계된다.
