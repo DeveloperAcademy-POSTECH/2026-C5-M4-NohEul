@@ -65,6 +65,13 @@ for STRATEGY in "${STRATEGIES[@]}"; do
   CAMPAIGN_ID=$(mysql -h "$DB_HOST" -u "$DB_USER" -D "$DB_NAME" -N < "$SCRIPT_DIR/seed.sql" | tail -1)
   echo "campaign_id=$CAMPAIGN_ID"
 
+  # 시딩은 mysql 명령이, 발급은 앱이 한다. 둘이 서로 다른 DB를 보면 모든 요청이 404가 되므로 바로 멈춘다.
+  if ! curl -sf "$BASE_URL/api/coupons/$CAMPAIGN_ID" > /dev/null; then
+    echo "앱이 방금 시딩한 campaign $CAMPAIGN_ID을 찾지 못했습니다. 앱과 mysql이 서로 다른 DB를 보고 있습니다."
+    echo "mysql 접속 정보(MYSQL_TCP_PORT, MYSQL_PWD, DB_HOST)가 앱의 datasource 설정과 같은지 확인하세요."
+    exit 1
+  fi
+
   K6_JSON="$RESULT_DIR/$STRATEGY-summary.json"
   k6 run --summary-export "$K6_JSON" \
     -e BASE_URL="$BASE_URL" -e CAMPAIGN_ID="$CAMPAIGN_ID" -e STRATEGY="$STRATEGY" \

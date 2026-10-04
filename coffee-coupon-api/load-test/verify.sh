@@ -8,7 +8,10 @@ DB_USER="${DB_USER:-root}"
 DB_NAME="${DB_NAME:-coffee_coupon}"
 EXPECTED_TOTAL_QUANTITY=2000
 
-RESPONSE=$(curl -sf "${BASE_URL}/api/coupons/${CAMPAIGN_ID}")
+if ! RESPONSE=$(curl -sf "${BASE_URL}/api/coupons/${CAMPAIGN_ID}"); then
+  echo "FAIL: 앱에서 campaign ${CAMPAIGN_ID}을 조회하지 못했습니다. 앱이 떠 있는지, 앱과 mysql이 같은 DB를 보고 있는지 확인하세요."
+  exit 1
+fi
 
 COUNTER_ISSUED=$(echo "$RESPONSE" | jq '.issuedQuantity')
 TOTAL=$(echo "$RESPONSE" | jq '.totalQuantity')
