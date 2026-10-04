@@ -27,6 +27,10 @@
 
 하나의 실험 결과만으로 더 나은 기술을 단정할 수 없습니다. 기술 자체보다 사용자 수, 요청이 몰리는 시점, 서비스가 허용할 수 있는 지연을 기준으로 전략을 선택해야 한다는 걸 확인했습니다.
 
+## 기술 블로그
+
+- [synchronized를 썼는데 왜 깨질까? 실험 6개로 뜯어본 JVM 락](https://0sunset0.tistory.com/17)
+
 ## 기술 스택
 
 - ![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white)
