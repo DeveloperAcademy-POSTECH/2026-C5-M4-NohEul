@@ -1,6 +1,7 @@
-# 로컬 개발·테스트 전용 MySQL. 비밀번호는 공개된 개발용 값이므로 운영에 쓰지 않는다.
+# 로컬 개발·테스트용 MySQL과 앱. 비밀번호는 공개된 개발용 값이므로 운영에 쓰지 않는다.
 # 포트는 127.0.0.1에만 바인딩해 같은 네트워크의 다른 기기에서 접속할 수 없게 한다.
-# 접속 정보는 coffee-coupon-api/src/main/resources/application.yaml의 기본값과 일치한다.
+# MySQL 접속 정보는 coffee-coupon-api/src/main/resources/application.yaml의 기본값과 일치한다.
+# MySQL만 띄우려면: docker compose up -d --wait mysql
 services:
   mysql:
     image: mysql:8.4
@@ -15,3 +16,24 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+
+  app:
+    build: ./coffee-coupon-api
+    image: coffee-coupon-api
+    container_name: coffee-coupon-app
+    environment:
+      # 컨테이너 안의 localhost는 앱 컨테이너 자신이라, compose 내부 네트워크의 서비스 이름(mysql)으로 붙는다.
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/coffee_coupon?createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: coffee
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy   # MySQL 헬스체크를 통과한 뒤에 앱을 시작
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s

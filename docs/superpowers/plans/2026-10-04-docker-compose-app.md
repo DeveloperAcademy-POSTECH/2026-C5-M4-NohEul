@@ -34,10 +34,10 @@
 **Files:**
 - Modify: `docker-compose.yml`
 
-- [ ] `app` 서비스를 추가한다: `build`, `SPRING_DATASOURCE_*`(내부 주소 `mysql:3306`), `127.0.0.1:8080`, `depends_on: service_healthy`.
-- [ ] 앱 헬스체크를 추가한다. JRE 이미지에 `curl`이 있는 것을 확인했다(2026-10-04): `curl -sf http://localhost:8080/actuator/health`.
-- [ ] `docker compose up -d --wait`으로 두 컨테이너가 healthy가 되고, 호스트에서 `/actuator/health`가 UP인지 확인한다.
-- [ ] 커밋: `feat: docker compose로 앱 컨테이너 함께 실행`
+- [x] `app` 서비스를 추가한다: `build`, `SPRING_DATASOURCE_*`(내부 주소 `mysql:3306`), `127.0.0.1:8080`, `depends_on: service_healthy`.
+- [x] 앱 헬스체크를 추가한다. JRE 이미지에 `curl`이 있는 것을 확인했다(2026-10-04): `curl -sf http://localhost:8080/actuator/health`.
+- [x] `docker compose up -d --wait`으로 두 컨테이너가 healthy가 되고, 호스트에서 `/actuator/health`가 UP인지 확인한다.
+- [x] 커밋: `feat: docker compose로 앱 컨테이너 함께 실행`
 
 ## Task 3: MySQL 호스트 포트 기본값 13306
 
