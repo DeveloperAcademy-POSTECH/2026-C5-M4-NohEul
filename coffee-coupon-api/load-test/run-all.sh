@@ -11,7 +11,6 @@ BASE_URL="${BASE_URL:-http://localhost:8080}"
 DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_USER="${DB_USER:-root}"
 DB_NAME="${DB_NAME:-coffee_coupon}"
-LOCAL_YAML="$SCRIPT_DIR/../src/main/resources/application-local.yaml"
 
 if [ "$#" -gt 0 ]; then
   STRATEGIES=("$@")
@@ -19,15 +18,11 @@ else
   STRATEGIES=(no-lock pessimistic optimistic synchronized distributed)
 fi
 
-# DB 비밀번호: MYSQL_PWD가 없으면 application-local.yaml에서 읽고(따옴표 제거), 그것도 없으면 docker-compose 기본값
-if [ -z "${MYSQL_PWD:-}" ]; then
-  if [ -f "$LOCAL_YAML" ]; then
-    MYSQL_PWD=$(grep 'password:' "$LOCAL_YAML" | awk '{print $2}' | tr -d '"')
-  else
-    MYSQL_PWD=coffee
-  fi
-fi
-export MYSQL_PWD DB_HOST DB_USER DB_NAME
+# 기본값은 docker-compose MySQL(호스트 포트 13306, 비밀번호 coffee). 다른 MySQL을 쓰면 MYSQL_TCP_PORT와 MYSQL_PWD를 지정한다.
+# mysql 명령은 포트를 지정하지 않으면 3306에 붙으므로 MYSQL_TCP_PORT로 기본 포트를 넘긴다.
+export MYSQL_TCP_PORT="${MYSQL_TCP_PORT:-13306}"
+export MYSQL_PWD="${MYSQL_PWD:-coffee}"
+export DB_HOST DB_USER DB_NAME
 
 # 앱이 떠 있는지 먼저 확인 (DB 연결까지 확인됨)
 if ! curl -sf "$BASE_URL/actuator/health" > /dev/null; then

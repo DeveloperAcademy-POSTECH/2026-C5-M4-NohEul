@@ -44,13 +44,13 @@
 **Files:**
 - Modify: `docker-compose.yml`, `coffee-coupon-api/src/main/resources/application.yaml`, `coffee-coupon-api/load-test/run-all.sh`, `coffee-coupon-api/load-test/verify.sh`
 
-- [ ] compose MySQL 포트 기본값을 `${MYSQL_PORT:-13306}`으로 바꾼다.
-- [ ] `application.yaml` 기본 URL을 `localhost:13306`으로 바꾼다.
-- [ ] `run-all.sh`, `verify.sh`가 `MYSQL_TCP_PORT`가 없으면 13306을 쓰게 한다.
-- [ ] 로컬 MySQL이 3306을 쓰는 상태에서 `docker compose up -d --wait`이 충돌 없이 뜨는지 확인한다.
-- [ ] `run-all.sh`를 포트 지정 없이 작은 부하로 돌려 동작을 확인한다.
-- [ ] 앱 컨테이너를 내리고(`docker compose stop app`) `./gradlew test`가 compose MySQL로 통과하는지 확인한다. (개인 `application-local.yaml`이 있으면 그 url이 우선하므로, 확인할 때는 `SPRING_DATASOURCE_URL`로 13306을 지정한다)
-- [ ] 커밋: `chore: compose MySQL 호스트 포트 기본값을 13306으로 변경`
+- [x] compose MySQL 포트 기본값을 `${MYSQL_PORT:-13306}`으로 바꾼다.
+- [x] `application.yaml` 기본 URL을 `localhost:13306`으로 바꾼다.
+- [x] `run-all.sh`, `verify.sh`가 `MYSQL_TCP_PORT`가 없으면 13306을 쓰게 한다.
+- [x] 로컬 MySQL이 3306을 쓰는 상태에서 `docker compose up -d --wait`이 충돌 없이 뜨는지 확인한다.
+- [x] `run-all.sh`를 포트 지정 없이 작은 부하로 돌려 동작을 확인한다.
+- [x] 앱 컨테이너를 내리고(`docker compose stop app`) `./gradlew test`가 compose MySQL로 통과하는지 확인한다. (개인 `application-local.yaml`이 있으면 그 url이 우선하므로, 확인할 때는 `SPRING_DATASOURCE_URL`로 13306을 지정한다)
+- [x] 커밋: `chore: compose MySQL 호스트 포트 기본값을 13306으로 변경`
 
 ## Task 4: 문서
 
