@@ -97,6 +97,21 @@ services:
 - 직접 설치한 MySQL(3306)을 쓰고 싶으면 지금처럼 `DB_URL`이나 `application-local.yaml`, `MYSQL_TCP_PORT=3306`으로 지정한다.
 - 이미 떠 있는 compose MySQL 컨테이너는 포트 매핑이 바뀌므로 `docker compose up`이 다시 만든다. 데이터는 익명 볼륨이라 개발용으로 다시 시딩하면 된다.
 
+## 4-1. 설정값을 루트 `.env`로 모으기 (2026-10-04 추가 결정)
+
+비밀번호(`coffee`), 호스트 포트(13306), DB 이름(`coffee_coupon`)이 compose, 헬스체크, 앱 환경 변수, `application.yaml`, 스크립트, README에 흩어져 있었다. 값을 읽는 쪽(MySQL 이미지, 스프링, 셸 스크립트)이 셋이라 한 곳으로 완전히 모을 수는 없지만, 스프링을 뺀 나머지는 `.env` 하나를 기준으로 한다.
+
+| 읽는 쪽 | 읽는 곳 |
+|---|---|
+| docker compose (MySQL 컨테이너, 앱 컨테이너 환경 변수, 포트) | 루트 `.env` (compose가 자동으로 읽음) |
+| 부하테스트 스크립트 (`run-all.sh`, `verify.sh`) | `load-test/db-env.sh`가 루트 `.env`를 읽음. 이미 지정한 환경 변수가 있으면 그 값이 우선 |
+| 스프링 앱 (IDE 실행, 테스트) | `application.yaml` 기본값. `.env`를 읽지 않으므로 같은 값으로 맞춰 두고 주석으로 명시 |
+
+- `.env`는 공개된 개발용 값만 담으므로 커밋한다.
+- compose는 `${MYSQL_PASSWORD:?...}`처럼 값이 없으면 바로 실패하게 해서, `.env`가 없을 때 빈 비밀번호로 뜨는 일을 막는다.
+- MySQL 헬스체크와 README 시드 명령은 비밀번호를 직접 쓰지 않고 컨테이너 안의 `MYSQL_ROOT_PASSWORD` 환경 변수를 쓴다.
+- 스프링까지 `.env`를 읽게 하는 방법(`spring.config.import`)은 IDE, Gradle 테스트, 컨테이너의 실행 폴더가 달라 경로가 꼬이기 쉬워 쓰지 않는다.
+
 ## 5. 실행 흐름 (README)
 
 ```bash
@@ -130,4 +145,6 @@ docker compose down -v
 - 앱 → DB: compose 내부 네트워크의 `mysql:3306`, `SPRING_DATASOURCE_*` 환경 변수로 지정
 - MySQL 호스트 포트 기본값: 3306 → 13306 (로컬 MySQL과 충돌 방지), 관련 기본값 일괄 변경
 - 앱 헬스체크: 추가 (`--wait`이 UP까지 대기)
+- 설정값: compose와 스크립트는 루트 `.env` 하나를 기준으로, 스프링은 `application.yaml` 기본값을 같은 값으로 맞춤
+- MySQL 데이터: 이름 있는 볼륨(`mysql-data`). `docker compose down`으로 내려도 데이터가 남고, 지우려면 `down -v`
 - `application-local.yaml`: `.dockerignore`로 이미지에서 제외

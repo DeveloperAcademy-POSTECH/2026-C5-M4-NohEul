@@ -3,11 +3,8 @@ set -euo pipefail
 
 CAMPAIGN_ID="${1:?Usage: verify.sh <campaign_id> [base_url]}"
 BASE_URL="${2:-http://localhost:8080}"
-DB_HOST="${DB_HOST:-127.0.0.1}"
-DB_USER="${DB_USER:-root}"
-DB_NAME="${DB_NAME:-coffee_coupon}"
-# mysql 명령은 포트를 지정하지 않으면 3306에 붙는다. docker-compose MySQL의 기본 호스트 포트(13306)를 기본으로 쓴다.
-export MYSQL_TCP_PORT="${MYSQL_TCP_PORT:-13306}"
+# DB 접속 기본값은 저장소 루트의 .env(docker-compose와 같은 파일)에서 읽는다
+source "$(dirname "$0")/db-env.sh"
 EXPECTED_TOTAL_QUANTITY=2000
 
 if ! RESPONSE=$(curl -sf "${BASE_URL}/api/coupons/${CAMPAIGN_ID}"); then

@@ -3,7 +3,8 @@ spring:
     name: coffee-coupon-api
   profiles:
     active: local
-  # 기본값은 루트 docker-compose.yml의 MySQL(호스트 포트 13306, root/coffee)과 일치하는 로컬 개발 전용 값이다.
+  # 기본값은 루트 .env(docker-compose와 부하테스트 스크립트가 읽는 파일)의 MySQL 설정과 일치하는 로컬 개발 전용 값이다.
+  # 스프링은 .env를 읽지 않으므로, .env 값을 바꾸면 아래 기본값(포트 13306, root/coffee, DB coffee_coupon)도 같이 바꾼다.
   # 운영 환경에서는 반드시 환경 변수로 실제 접속 정보를 주입한다.
   # 다른 DB를 쓰려면 DB_URL/DB_USERNAME/DB_PASSWORD 환경 변수나 application-local.yaml(gitignore 대상)로 덮어쓴다.
   # 단, application-local.yaml이 있으면 그 값이 DB_URL보다 우선한다. 둘 다 이기려면 SPRING_DATASOURCE_URL을 쓴다.
