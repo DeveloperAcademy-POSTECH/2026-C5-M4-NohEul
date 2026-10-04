@@ -31,6 +31,7 @@ RATE=10 DURATION=2s coffee-coupon-api/load-test/run-all.sh    # 작게 먼저 �
 - **미구현 전략은 건너뛴다**: 없는 캠페인(0번)에 먼저 요청해서 `COUPON_NOT_FOUND`가 오면 엔드포인트가 있는 것으로, 스프링 기본 404가 오면 없는 것으로 보고 건너뛴다. 표에는 "건너뜀"으로 남는다.
 - **상태 코드 집계**: `coupon-issue-scale.js`가 응답을 성공(200) / 락 거부(403, 409) / 인프라 오류(그 외) 세 카운터로 세고, `run-all.sh`가 `--summary-export` JSON에서 읽어 표에 넣는다. 실제 발급 수와 판정은 `verify.sh` 결과에서 읽는다.
 - DB 비밀번호는 `MYSQL_PWD`가 있으면 그 값을, 없으면 `application-local.yaml`의 값을, 그것도 없으면 docker-compose 기본값(`coffee`)을 쓴다.
+- MySQL을 3306이 아닌 포트로 띄웠다면(예: `MYSQL_PORT=3308 docker compose up`) `export MYSQL_TCP_PORT=3308`을 먼저 지정한다. `mysql` 명령은 이 환경 변수로 포트를 정하고, 지정하지 않으면 3306에 붙는다. 앱도 같은 MySQL을 보고 있어야 한다.
 - 결과는 `load-test/results/<날짜-시간>/`에 전략별 k6 출력, k6 요약 JSON, 검증 결과, `summary.md`(결과 표)로 남는다(gitignore 대상).
 - 한 전략이 과발급(FAIL)이어도 멈추지 않고 나머지 전략을 계속 측정한다.
 

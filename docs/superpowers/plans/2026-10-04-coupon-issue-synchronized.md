@@ -79,18 +79,18 @@
 **Files:**
 - Modify: `coffee-coupon-api/load-test/coupon-issue-scale.js`
 
-- [ ] `VALID_STRATEGIES`에 `synchronized`를 추가한다.
-- [ ] 같은 날, 같은 장비에서 네 전략을 연달아 측정하고 결과를 기록한다.
-- [ ] 커밋: `chore: k6에 synchronized 전략 추가`
+- [x] `VALID_STRATEGIES`에 `synchronized`를 추가한다.
+- [x] 같은 날, 같은 장비에서 네 전략을 연달아 측정하고 결과를 기록한다.
+- [x] 커밋: `chore: k6에 synchronized 전략 추가` (실제로는 #19 자동화와 함께 `8c88999 feat: 락 전략 부하테스트 자동화(run-all.sh)와 synchronized 전략 추가`로 커밋. 측정 결과는 `aace75d`)
 
 ## Task 7: 문서
 
 **Files:**
 - Modify: `coffee-coupon-api/load-test/README.md`, `README.md`, `docs/superpowers/specs/2026-08-17-lock-strategy-load-test-harness-design.md`
 
-- [ ] 전략 목록, 엔드포인트 표, 결과 표에 synchronized를 추가한다.
-- [ ] 하네스 스펙 결정 목록에 "(2026-10-03 추가 결정) 비교 대상에 synchronized(JVM 락)를 추가한다." 한 줄을 넣는다.
-- [ ] 커밋: `docs: synchronized 전략 문서 반영`
+- [x] 전략 목록, 엔드포인트 표, 결과 표에 synchronized를 추가한다.
+- [x] 하네스 스펙 결정 목록에 "(2026-10-03 추가 결정) 비교 대상에 synchronized(JVM 락)를 추가한다." 한 줄을 넣는다.
+- [x] 커밋: `docs: synchronized 전략 문서 반영` (실제로는 `6f5be12`, `aace75d`와 이 커밋으로 나눠 반영)
 
 ## Task 8: PR
 

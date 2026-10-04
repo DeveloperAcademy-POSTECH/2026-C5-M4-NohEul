@@ -79,6 +79,10 @@ MYSQL_PORT=3307 docker compose up -d --wait
 export DB_URL='jdbc:mysql://localhost:3307/coffee_coupon?createDatabaseIfNotExist=true'
 ```
 
+`application-local.yaml`이 있으면 그 파일의 `spring.datasource.url`이 `DB_URL`보다 우선합니다. 이때는 그 파일의 url/password를 compose MySQL(포트, `coffee`)에 맞추거나, 환경 변수 `SPRING_DATASOURCE_URL`/`SPRING_DATASOURCE_PASSWORD`로 지정하세요(환경 변수가 yaml 파일보다 우선).
+
+부하테스트 스크립트(`seed.sql`, `verify.sh`, `run-all.sh`)의 `mysql` 명령도 같은 포트를 보도록 `export MYSQL_TCP_PORT=3307`을 함께 지정합니다.
+
 ### 2. 앱 실행
 
 ```bash
