@@ -94,4 +94,4 @@
 
 ## Task 8: PR
 
-- [ ] `develop`으로 PR을 연다. 본문은 `.github/PULL_REQUEST_TEMPLATE.md` 구조를 따르고, 올리기 전에 사용자에게 문구를 확인받는다.
+- [x] `develop`으로 PR을 연다. 본문은 `.github/PULL_REQUEST_TEMPLATE.md` 구조를 따르고, 올리기 전에 사용자에게 문구를 확인받는다. (#29)
