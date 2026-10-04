@@ -57,10 +57,10 @@
 **Files:**
 - Modify: `README.md`, `coffee-coupon-api/load-test/README.md`
 
-- [ ] 루트 README 실행 방법을 "`docker compose up -d --wait` 한 번" 중심으로 정리하고, 개발용(MySQL만 띄우고 IDE 실행) 방법도 남긴다.
-- [ ] 기본 포트(13306), 접속 정보, 시드 명령, 포트 충돌 안내를 새 기본값에 맞춘다.
-- [ ] `load-test/README.md`의 포트 안내(`MYSQL_TCP_PORT`)를 새 기본값에 맞추고, 컨테이너로 측정하면 수치가 달라진다는 점을 적는다.
-- [ ] 커밋: `docs: docker compose 실행 방법과 기본 포트 13306 반영`
+- [x] 루트 README 실행 방법을 "`docker compose up -d --wait` 한 번" 중심으로 정리하고, 개발용(MySQL만 띄우고 IDE 실행) 방법도 남긴다.
+- [x] 기본 포트(13306), 접속 정보, 시드 명령, 포트 충돌 안내를 새 기본값에 맞춘다.
+- [x] `load-test/README.md`의 포트 안내(`MYSQL_TCP_PORT`)를 새 기본값에 맞추고, 컨테이너로 측정하면 수치가 달라진다는 점을 적는다.
+- [x] 커밋: `docs: docker compose 실행 방법과 기본 포트 13306 반영`
 
 ## Task 5: PR
 

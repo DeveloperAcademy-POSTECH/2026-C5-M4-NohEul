@@ -15,7 +15,7 @@
 - k6 (`brew install k6`)
 - jq (`brew install jq`)
 - mysql CLI
-- MySQL이 떠 있고 앱이 거기에 연결될 것 (루트 README의 "실행 방법" 참고)
+- MySQL과 앱이 떠 있을 것. `docker compose up -d --wait`이면 둘 다 뜬다 (루트 README의 "실행 방법" 참고)
 - 각 전략이 `/api/coupons/{campaignId}/issue-<전략>` 형태의 별도 엔드포인트(`issue-no-lock`/`issue-pessimistic`/`issue-optimistic`/`issue-synchronized`/`issue-distributed`)로 앱에 존재해야 한다. 각 전략은 자기 브랜치에서 구현되지만 브랜치가 순차적으로 develop에 머지되므로(구현→머지 반복), 가장 최근에 머지된 브랜치에는 그때까지의 엔드포인트가 전부 함께 있다.
 
 ## 한 번에 돌리기
@@ -30,8 +30,7 @@ RATE=10 DURATION=2s coffee-coupon-api/load-test/run-all.sh    # 작게 먼저 �
 
 - **미구현 전략은 건너뛴다**: 없는 캠페인(0번)에 먼저 요청해서 `COUPON_NOT_FOUND`가 오면 엔드포인트가 있는 것으로, 스프링 기본 404가 오면 없는 것으로 보고 건너뛴다. 표에는 "건너뜀"으로 남는다.
 - **상태 코드 집계**: `coupon-issue-scale.js`가 응답을 성공(200) / 락 거부(403, 409) / 인프라 오류(그 외) 세 카운터로 세고, `run-all.sh`가 `--summary-export` JSON에서 읽어 표에 넣는다. 실제 발급 수와 판정은 `verify.sh` 결과에서 읽는다.
-- DB 비밀번호는 `MYSQL_PWD`가 있으면 그 값을, 없으면 `application-local.yaml`의 값을, 그것도 없으면 docker-compose 기본값(`coffee`)을 쓴다.
-- MySQL을 3306이 아닌 포트로 띄웠다면(예: `MYSQL_PORT=3308 docker compose up`) `export MYSQL_TCP_PORT=3308`을 먼저 지정한다. `mysql` 명령은 이 환경 변수로 포트를 정하고, 지정하지 않으면 3306에 붙는다. 앱도 같은 MySQL을 보고 있어야 한다.
+- 시딩과 검증의 `mysql` 명령은 기본으로 저장소 루트 `.env`의 값(docker-compose MySQL, 호스트 포트 13306, 비밀번호 `coffee`)으로 붙는다. 이 기본값은 `db-env.sh`가 읽어 온다. 다른 MySQL을 쓰면 `MYSQL_TCP_PORT`와 `MYSQL_PWD`를 함께 지정한다(직접 지정한 값이 `.env`보다 우선). 앱도 같은 MySQL을 보고 있어야 한다.
 - 결과는 `load-test/results/<날짜-시간>/`에 전략별 k6 출력, k6 요약 JSON, 검증 결과, `summary.md`(결과 표)로 남는다(gitignore 대상).
 - 한 전략이 과발급(FAIL)이어도 멈추지 않고 나머지 전략을 계속 측정한다.
 
@@ -39,18 +38,19 @@ RATE=10 DURATION=2s coffee-coupon-api/load-test/run-all.sh    # 작게 먼저 �
 
 브랜치를 오갈 필요 없이, **엔드포인트가 다 모여 있는 브랜치 하나에서 앱을 한 번만 띄워두고** 전략(엔드포인트)만 바꿔가며 반복하면 된다. 아래 명령은 저장소 루트에서 실행한다.
 
-1. 앱을 기동한다 (별도 터미널, 계속 띄워둠).
+1. MySQL과 앱을 띄운다.
    ```bash
-   cd coffee-coupon-api
-   ./gradlew bootRun
+   docker compose up -d --wait
    ```
-2. 검증할 전략을 고르고, DB 비밀번호를 넣어 둔다. **`no-lock`(대조군)부터 먼저 하는 걸 권장**한다. 락이 없을 때 실제로 얼마나 과발급되는지 먼저 확인해두면 나머지 전략의 결과를 해석할 기준이 생긴다.
+   IDE로 앱을 실행하는 경우는 루트 README의 "IDE로 앱 실행하기" 참고.
+2. 검증할 전략을 고르고, `mysql` 명령이 붙을 포트와 비밀번호를 넣어 둔다. **`no-lock`(대조군)부터 먼저 하는 걸 권장**한다. 락이 없을 때 실제로 얼마나 과발급되는지 먼저 확인해두면 나머지 전략의 결과를 해석할 기준이 생긴다.
    ```bash
    STRATEGY=no-lock      # 이후 pessimistic → optimistic → synchronized 순으로 반복
-   export MYSQL_PWD=coffee   # docker-compose MySQL 기본값
+   export MYSQL_TCP_PORT=13306 MYSQL_PWD=coffee   # docker-compose MySQL 기본값 (루트 .env와 같은 값)
    ```
-   직접 설치한 MySQL을 `application-local.yaml`로 연결해 쓰고 있다면 그 파일의 비밀번호를 쓴다. yaml에 따옴표로 감싸져 있으면 따옴표는 빼야 한다.
+   직접 설치한 MySQL을 쓰고 있다면 그 MySQL의 포트와 비밀번호를 넣는다. 비밀번호를 `application-local.yaml`에서 읽는다면, yaml에 따옴표로 감싸져 있을 때 따옴표는 빼야 한다.
    ```bash
+   export MYSQL_TCP_PORT=3306
    export MYSQL_PWD=$(grep 'password:' coffee-coupon-api/src/main/resources/application-local.yaml | awk '{print $2}' | tr -d '"')
    ```
 3. 캠페인을 새로 시딩하고 `campaign_id`를 확보한다. **전략마다 매번 새로 시딩한다.** 이전 전략이 다 써버린 캠페인을 재사용하면 안 된다.
@@ -62,7 +62,7 @@ RATE=10 DURATION=2s coffee-coupon-api/load-test/run-all.sh    # 작게 먼저 �
    k6 run -e CAMPAIGN_ID=<3단계에서 나온 값> -e STRATEGY=$STRATEGY coffee-coupon-api/load-test/coupon-issue-scale.js
    ```
    작게 먼저 확인하고 싶으면 `-e RATE=10 -e DURATION=2s -e PRE_ALLOCATED_VUS=10 -e MAX_VUS=20`으로 축소해서 실행. 설계 목표치(6,000)로 돌리려면 `-e RATE=6000`.
-5. 결과를 검증한다. `verify.sh`는 `campaign.issuedQuantity` 카운터를 신뢰하지 않고 **`coupon_issue` 테이블의 실제 행 수**로 과발급 여부를 판정한다(이유는 아래 "왜 issuedQuantity가 아니라 실제 행 수로 판정하는가" 참고). 2단계에서 넣은 `MYSQL_PWD`를 그대로 쓴다.
+5. 결과를 검증한다. `verify.sh`는 `campaign.issuedQuantity` 카운터를 신뢰하지 않고 **`coupon_issue` 테이블의 실제 행 수**로 과발급 여부를 판정한다(이유는 아래 "왜 issuedQuantity가 아니라 실제 행 수로 판정하는가" 참고). 2단계에서 넣은 `MYSQL_TCP_PORT`, `MYSQL_PWD`를 그대로 쓴다.
    ```bash
    coffee-coupon-api/load-test/verify.sh <campaign_id>
    ```
@@ -87,6 +87,7 @@ RATE=10 DURATION=2s coffee-coupon-api/load-test/run-all.sh    # 작게 먼저 �
 - **DB 커넥션 풀**: 앱의 Hikari 커넥션 풀 크기(기본값 10)가 모든 전략에 동일하게 적용되는 조건이다. 실측 처리량이 6,000 req/s에 못 미쳐도 그게 "락 자체의 한계"인지 "커넥션 풀 크기의 한계"인지는 이 표만으로는 구분 안 된다. 절대 수치보다 **전략 간 상대 비교**에 집중한다.
 - **낙관적 락의 언더셀**: 재시도 로직 없이 구현했다면 `issuedQuantity`가 2,000에 못 미치는 채로 끝날 수 있다. 이건 과발급이 아니라 낙관적 락의 특성이므로 "과발급" 칸에는 "없음"으로 적고, 비고에 언더셀 수치를 남긴다.
 - **synchronized는 단일 서버 전용**: 락이 JVM 메모리에 있어서 서버를 여러 대 띄우면 서로를 막지 못한다. 이 하네스는 로컬 단일 인스턴스라 다른 전략과 같은 조건에서 비교할 수 있지만, 결과를 다중 서버 환경에 그대로 옮기면 안 된다.
+- **앱 실행 방법에 따라 수치가 달라진다**: 앱을 컨테이너로 띄우면(Docker Desktop의 가상 머신 위에서 실행) IDE로 실행할 때와 응답 시간·처리량이 다르다. 전략끼리 비교할 때는 같은 실행 방법으로 재고, 결과 표의 측정 조건에 실행 방법을 함께 적는다.
 - **처리량/지연시간은 판정에 안 쓴다**: k6 요약의 처리량(req/s)·p95 등은 비고 칸에 참고용으로 기록만 한다. 이번 하네스의 PASS/FAIL은 정합성(과발급 여부)만으로 결정한다.
 
 ## 문제 해결
@@ -96,5 +97,5 @@ RATE=10 DURATION=2s coffee-coupon-api/load-test/run-all.sh    # 작게 먼저 �
 - k6 요약에 404가 대량으로 찍히면 `STRATEGY` 값에 오타가 있거나(`no-lock`/`pessimistic`/`optimistic`/`synchronized`/`distributed` 중 하나여야 함), 그 전략의 엔드포인트를 추가한 브랜치가 아직 지금 체크아웃한 브랜치에 안 들어와 있는 것이다.
 - `mysql`이 `Access denied for user 'root'`를 내면 `MYSQL_PWD`가 틀린 것이다. `application-local.yaml`에서 비밀번호를 읽었다면 따옴표까지 들어가지 않았는지 확인한다(`echo ${#MYSQL_PWD}`로 글자 수 확인).
 - 명령을 붙여넣었는데 `cmdsubst>`가 뜨고 멈추면 줄바꿈 때문에 `$( ... )`가 둘로 쪼개진 것이다. `Ctrl + C`로 취소하고 한 줄로 다시 붙여넣는다.
-- 앱을 재시작했더니 시딩한 캠페인이 사라졌다면 `ddl-auto: create` 설정 때문이다. 앱을 먼저 띄우고 그다음에 시딩한다.
-- `run-all.sh`가 "앱이 방금 시딩한 campaign을 찾지 못했습니다"로 멈추면, `mysql` 명령(시딩)과 앱이 서로 다른 DB를 보고 있는 것이다. 예: 앱은 docker MySQL을 보는데 `MYSQL_TCP_PORT`를 안 넣어 시딩이 로컬 MySQL(3306)로 간 경우. 이 상태로 측정하면 모든 요청이 404(인프라 오류)로 집계된다.
+- `application-local.yaml`에 `ddl-auto: create`를 두고 쓰는 경우, 앱을 재시작하면 테이블이 새로 만들어져 시딩한 캠페인이 사라진다. 앱을 먼저 띄우고 그다음에 시딩한다. (기본값 `update`에서는 사라지지 않는다)
+- `run-all.sh`가 "앱이 방금 시딩한 campaign을 찾지 못했습니다"로 멈추면, `mysql` 명령(시딩)과 앱이 서로 다른 DB를 보고 있는 것이다. 예: 앱은 직접 설치한 MySQL(3306)을 보는데 `MYSQL_TCP_PORT`를 안 넣어 시딩이 기본값인 docker-compose MySQL(13306)로 간 경우. 이 상태로 측정하면 모든 요청이 404(인프라 오류)로 집계된다.
