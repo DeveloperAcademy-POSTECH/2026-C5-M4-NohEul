@@ -8,7 +8,7 @@
 
 **Tech Stack:** Kotlin, Spring Boot, Spring Data JPA, MySQL(로컬), JUnit 5, `@SpringBootTest`(컨트롤러/동시성 테스트), k6
 
-**Spec:** `docs/superpowers/specs/2026-10-03-coupon-issue-synchronized-design.md`
+**Spec:** `docs/design/specs/2026-10-03-coupon-issue-synchronized-design.md`
 
 ## Global Constraints
 
@@ -86,7 +86,7 @@
 ## Task 7: 문서
 
 **Files:**
-- Modify: `coffee-coupon-api/load-test/README.md`, `README.md`, `docs/superpowers/specs/2026-08-17-lock-strategy-load-test-harness-design.md`
+- Modify: `coffee-coupon-api/load-test/README.md`, `README.md`, `docs/design/specs/2026-08-17-lock-strategy-load-test-harness-design.md`
 
 - [x] 전략 목록, 엔드포인트 표, 결과 표에 synchronized를 추가한다.
 - [x] 하네스 스펙 결정 목록에 "(2026-10-03 추가 결정) 비교 대상에 synchronized(JVM 락)를 추가한다." 한 줄을 넣는다.

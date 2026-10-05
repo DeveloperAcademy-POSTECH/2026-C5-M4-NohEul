@@ -8,7 +8,7 @@
 
 **Tech Stack:** k6 v1.1.0 (`constant-arrival-rate` executor), MySQL 9.x (mysql CLI), bash, jq, curl — 모두 로컬에 설치 확인됨. Gradle/Kotlin 빌드와 무관.
 
-**Spec:** `docs/superpowers/specs/2026-08-17-lock-strategy-load-test-harness-design.md`
+**Spec:** `docs/design/specs/2026-08-17-lock-strategy-load-test-harness-design.md`
 
 ## Global Constraints
 
@@ -295,7 +295,7 @@ git commit -m "feat: add result verification script for lock-strategy load test"
 
 락 없음(대조군)/비관적/낙관적/분산 락 네 가지가 가정한 트래픽(peak 6,000 QPS, 재고 2,000장, 10초 몰림)에서
 과발급 없이 동작하는지(또는 얼마나 과발급되는지) 동일한 기준으로 검증하는 도구 세트입니다.
-설계 배경은 `docs/superpowers/specs/2026-08-17-lock-strategy-load-test-harness-design.md` 참고.
+설계 배경은 `docs/design/specs/2026-08-17-lock-strategy-load-test-harness-design.md` 참고.
 
 ### 왜 6,000 QPS인가
 
@@ -409,7 +409,7 @@ git push -u origin feature/lock-strategy-load-test
 gh pr create --title "feat: 락 전략 비교용 k6 부하테스트 하네스" --body "$(cat <<'EOF'
 ## Summary
 - 락 없음(대조군)/비관적/낙관적/분산 락 네 가지를 peak 6,000 QPS(재고 2,000장, 10초 몰림) 가정으로 동일하게 검증할 수 있는 k6 하네스 추가
-- 스펙: docs/superpowers/specs/2026-08-17-lock-strategy-load-test-harness-design.md
+- 스펙: docs/design/specs/2026-08-17-lock-strategy-load-test-harness-design.md
 
 ## Test plan
 - [x] seed.sql 두 번 실행 → 서로 다른 campaign_id 생성 확인

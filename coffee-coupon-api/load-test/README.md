@@ -2,7 +2,7 @@
 
 락 없음(대조군)/비관적/낙관적/synchronized(JVM 락)/분산 락이 가정한 트래픽(peak 6,000 QPS, 재고 2,000장, 10초 몰림)에서
 과발급 없이 동작하는지(또는 얼마나 과발급되는지) 동일한 기준으로 검증하는 도구 세트입니다.
-설계 배경은 `docs/superpowers/specs/2026-08-17-lock-strategy-load-test-harness-design.md` 참고.
+설계 배경은 `docs/design/specs/2026-08-17-lock-strategy-load-test-harness-design.md` 참고.
 
 ### 왜 6,000 QPS인가
 
@@ -75,7 +75,7 @@ RATE=10 DURATION=2s coffee-coupon-api/load-test/run-all.sh    # 작게 먼저 �
 | 비관적 락 | 2,000 | 3,000 | 0 | 2,000 | 없음 | throughput≈500 req/s, avg 66ms, p95 244ms |
 | 낙관적 락 | 2,000 | 3,001 | 0 | 2,000 | 없음 | throughput≈500 req/s, avg 153ms, p95 355ms. 언더셀 없음(재시도로 전량 소진) |
 | synchronized (JVM 락) | 2,000 | 3,000 | 0 | 2,000 | 없음 | throughput≈488 req/s, avg 1.01s, p95 1.89s. 대기 VU 최대 912개 |
-| 분산 락 | - | - | - | - | 미실측 | 미구현 (스펙/계획만 존재: `docs/superpowers/plans/2026-08-26-coupon-issue-distributed-lock.md`) |
+| 분산 락 | - | - | - | - | 미실측 | 미구현 (스펙/계획만 존재: `docs/design/plans/2026-08-26-coupon-issue-distributed-lock.md`) |
 
 측정 조건: `feature/coupon-issue-synchronized`(commit `6f5be12`), 로컬 단일 인스턴스(앱은 IDE에서 직접 실행, MySQL 8.4는 docker-compose), `RATE=500`(기본값), `DURATION=10s`(기본값), `run-all.sh`로 네 전략을 연달아 측정, 2026-10-04. no-lock은 레이스 컨디션이 확률적이라 실행마다 과발급 수가 크게 달라진다.
 
