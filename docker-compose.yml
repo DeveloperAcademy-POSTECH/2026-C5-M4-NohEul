@@ -1,17 +1,46 @@
-# 로컬 개발·테스트 전용 MySQL. 비밀번호는 공개된 개발용 값이므로 운영에 쓰지 않는다.
+# 로컬 개발·테스트용 MySQL과 앱. 값은 같은 폴더의 .env에서 읽는다(처음 한 번 cp .env.example .env).
 # 포트는 127.0.0.1에만 바인딩해 같은 네트워크의 다른 기기에서 접속할 수 없게 한다.
-# 접속 정보는 coffee-coupon-api/src/main/resources/application.yaml의 기본값과 일치한다.
+# MySQL만 띄우려면: docker compose up -d --wait mysql
 services:
   mysql:
     image: mysql:8.4
     container_name: coffee-coupon-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: coffee
-      MYSQL_DATABASE: coffee_coupon
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:?.env에 MYSQL_PASSWORD가 필요합니다}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?.env에 MYSQL_DATABASE가 필요합니다}
     ports:
-      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+      - "127.0.0.1:${MYSQL_PORT:?.env에 MYSQL_PORT가 필요합니다}:3306"
+    volumes:
+      # 이름 있는 볼륨에 데이터를 둔다. docker compose down(-v 없이)으로 내려도 데이터가 남고, 쓰레기 볼륨이 쌓이지 않는다.
+      - mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pcoffee"]
+      # $$는 compose가 치환하지 않고 컨테이너 안의 환경 변수로 남기라는 뜻
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
       interval: 5s
       timeout: 3s
       retries: 20
+
+  app:
+    build: ./coffee-coupon-api
+    image: coffee-coupon-api
+    container_name: coffee-coupon-app
+    environment:
+      # 컨테이너 안의 localhost는 앱 컨테이너 자신이라, compose 내부 네트워크의 서비스 이름(mysql)과
+      # 컨테이너 포트(3306)로 붙는다. 호스트 포트(MYSQL_PORT)와는 무관하다.
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy   # MySQL 헬스체크를 통과한 뒤에 앱을 시작
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
+
+volumes:
+  mysql-data:

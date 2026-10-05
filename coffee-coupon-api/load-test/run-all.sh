@@ -8,10 +8,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE_URL="${BASE_URL:-http://localhost:8080}"
-DB_HOST="${DB_HOST:-127.0.0.1}"
-DB_USER="${DB_USER:-root}"
-DB_NAME="${DB_NAME:-coffee_coupon}"
-LOCAL_YAML="$SCRIPT_DIR/../src/main/resources/application-local.yaml"
+# DB 접속 기본값은 저장소 루트의 .env(docker-compose와 같은 파일)에서 읽는다
+source "$SCRIPT_DIR/db-env.sh"
 
 if [ "$#" -gt 0 ]; then
   STRATEGIES=("$@")
@@ -19,15 +17,6 @@ else
   STRATEGIES=(no-lock pessimistic optimistic synchronized distributed)
 fi
 
-# DB 비밀번호: MYSQL_PWD가 없으면 application-local.yaml에서 읽고(따옴표 제거), 그것도 없으면 docker-compose 기본값
-if [ -z "${MYSQL_PWD:-}" ]; then
-  if [ -f "$LOCAL_YAML" ]; then
-    MYSQL_PWD=$(grep 'password:' "$LOCAL_YAML" | awk '{print $2}' | tr -d '"')
-  else
-    MYSQL_PWD=coffee
-  fi
-fi
-export MYSQL_PWD DB_HOST DB_USER DB_NAME
 
 # 앱이 떠 있는지 먼저 확인 (DB 연결까지 확인됨)
 if ! curl -sf "$BASE_URL/actuator/health" > /dev/null; then

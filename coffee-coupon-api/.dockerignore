@@ -1,0 +1,13 @@
+# 이미지 안에서 새로 빌드하므로 호스트의 빌드 결과물은 보내지 않는다
+build/
+.gradle/
+.kotlin/
+
+# 개인 로컬 설정. jar에 들어가면 컨테이너가 내 PC용 DB 설정으로 붙으려다 실패한다
+src/main/resources/application-local.yaml
+
+# 실행과 무관한 파일
+.idea/
+.omc/
+load-test/
+HELP.md
