@@ -21,7 +21,7 @@
 | 낙관적 락 | 153ms | 정확히 2,000장 (단, 요청 집중 시 재시도 반복으로 지연·DB 부하 증가) |
 | synchronized | 1.01초 | 정확히 2,000장 (단, 발급 전체를 한 줄로 세워 가장 느림, 단일 서버에서만 유효) |
 
-측정: 2026-10-04, 로컬 단일 인스턴스 + docker MySQL, 500 req/s × 10초. 측정 조건과 상세 수치는 [load-test/README.md](coffee-coupon-api/load-test/README.md) 참고.
+측정: 2026-10-04, Apple M5 Mac(10코어: 성능 4 + 효율 6, 메모리 24GB) 한 대에서 앱(JDK 17, IDE에서 직접 실행), MySQL 8.4(docker), k6를 함께 실행, 500 req/s × 10초. 측정 조건과 상세 수치는 [load-test/README.md](coffee-coupon-api/load-test/README.md) 참고.
 
 ## 발견한 문제와 해결
 
