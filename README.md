@@ -33,6 +33,7 @@
 ## 기술 블로그
 
 - [synchronized를 썼는데 왜 깨질까? 실험 6개로 뜯어본 JVM 락](https://0sunset0.tistory.com/17)
+- [락 보관함은 왜 ConcurrentHashMap이어야 했을까?](https://0sunset0.tistory.com/18)
 
 ## 기술 스택
 
