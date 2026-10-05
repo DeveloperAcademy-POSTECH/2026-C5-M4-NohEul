@@ -77,7 +77,7 @@ RATE=10 DURATION=2s coffee-coupon-api/load-test/run-all.sh    # 작게 먼저 �
 | synchronized (JVM 락) | 2,000 | 3,000 | 0 | 2,000 | 없음 | throughput≈488 req/s, avg 1.01s, p95 1.89s. 대기 VU 최대 912개 |
 | 분산 락 | - | - | - | - | 미실측 | 미구현 (스펙/계획만 존재: `docs/design/plans/2026-08-26-coupon-issue-distributed-lock.md`) |
 
-측정 조건: `feature/coupon-issue-synchronized`(commit `6f5be12`), 로컬 단일 인스턴스(앱은 IDE에서 직접 실행, MySQL 8.4는 docker-compose), `RATE=500`(기본값), `DURATION=10s`(기본값), `run-all.sh`로 네 전략을 연달아 측정, 2026-10-04. no-lock은 레이스 컨디션이 확률적이라 실행마다 과발급 수가 크게 달라진다.
+측정 조건: `feature/coupon-issue-synchronized`(commit `6f5be12`), Apple M5 Mac(10코어: 성능 4 + 효율 6, 메모리 24GB, macOS 26) 한 대에서 k6·앱·MySQL을 함께 실행(앱은 JDK 17로 IDE에서 직접 실행, HikariCP 풀 10개, MySQL 8.4는 docker-compose), `RATE=500`(기본값), `DURATION=10s`(기본값), `run-all.sh`로 네 전략을 연달아 측정, 2026-10-04. no-lock은 레이스 컨디션이 확률적이라 실행마다 과발급 수가 크게 달라진다.
 
 이전 측정(2026-08-27, `develop` commit `883e343`, 로컬 설치 MySQL): 락 없음 8장 과발급(avg 791ms), 비관적 락 avg 1.44s, 낙관적 락 avg 90ms. MySQL 실행 환경과 코드가 달라 위 표와 수치를 직접 비교하지 않는다.
 
