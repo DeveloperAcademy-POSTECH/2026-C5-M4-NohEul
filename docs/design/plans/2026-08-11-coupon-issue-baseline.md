@@ -8,7 +8,7 @@
 
 **Tech Stack:** Kotlin 2.3.21, Spring Boot 4.1.0 (Spring Framework 7.0.8), Spring Data JPA, MySQL, JUnit 5 (Jupiter 6.0.3), Mockito 5.23.0, AssertJ — all already declared in `coffee-coupon-api/build.gradle.kts`, no new dependencies needed.
 
-Spec: `docs/superpowers/specs/2026-08-11-coupon-issue-baseline-design.md`
+Spec: `docs/design/specs/2026-08-11-coupon-issue-baseline-design.md`
 
 ## Global Constraints
 

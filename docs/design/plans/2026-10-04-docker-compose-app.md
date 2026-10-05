@@ -4,7 +4,7 @@
 
 **Goal:** `docker compose up -d --wait` 한 번으로 MySQL과 앱이 함께 떠서 `/actuator/health`가 UP이 되고, 로컬 MySQL이 3306을 써도 충돌하지 않게 한다.
 
-**Spec:** `docs/superpowers/specs/2026-10-04-docker-compose-app-design.md`
+**Spec:** `docs/design/specs/2026-10-04-docker-compose-app-design.md`
 
 **Issue:** #28
 
