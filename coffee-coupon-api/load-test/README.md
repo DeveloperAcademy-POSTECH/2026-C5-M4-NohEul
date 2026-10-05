@@ -15,7 +15,7 @@
 - k6 (`brew install k6`)
 - jq (`brew install jq`)
 - mysql CLI
-- MySQL과 앱이 떠 있을 것. `docker compose up -d --wait`이면 둘 다 뜬다 (루트 README의 "실행 방법" 참고)
+- MySQL과 앱이 떠 있을 것. `docker compose up -d --wait`이면 둘 다 뜬다 ([docs/RUNNING.md](../../docs/RUNNING.md) 참고)
 - 각 전략이 `/api/coupons/{campaignId}/issue-<전략>` 형태의 별도 엔드포인트(`issue-no-lock`/`issue-pessimistic`/`issue-optimistic`/`issue-synchronized`/`issue-distributed`)로 앱에 존재해야 한다. 각 전략은 자기 브랜치에서 구현되지만 브랜치가 순차적으로 develop에 머지되므로(구현→머지 반복), 가장 최근에 머지된 브랜치에는 그때까지의 엔드포인트가 전부 함께 있다.
 
 ## 한 번에 돌리기
@@ -28,6 +28,7 @@ coffee-coupon-api/load-test/run-all.sh no-lock synchronized   # 고른 전략만
 RATE=10 DURATION=2s coffee-coupon-api/load-test/run-all.sh    # 작게 먼저 확인
 ```
 
+- **시딩은 자동이다**: 전략마다 `seed.sql`로 새 캠페인(재고 2,000장)을 만들고 그 ID로 측정한다. 따로 시드를 넣을 필요 없다.
 - **미구현 전략은 건너뛴다**: 없는 캠페인(0번)에 먼저 요청해서 `COUPON_NOT_FOUND`가 오면 엔드포인트가 있는 것으로, 스프링 기본 404가 오면 없는 것으로 보고 건너뛴다. 표에는 "건너뜀"으로 남는다.
 - **상태 코드 집계**: `coupon-issue-scale.js`가 응답을 성공(200) / 락 거부(403, 409) / 인프라 오류(그 외) 세 카운터로 세고, `run-all.sh`가 `--summary-export` JSON에서 읽어 표에 넣는다. 실제 발급 수와 판정은 `verify.sh` 결과에서 읽는다.
 - 시딩과 검증의 `mysql` 명령은 기본으로 저장소 루트 `.env`의 값(docker-compose MySQL, 호스트 포트 13306, 비밀번호 `coffee`)으로 붙는다. 이 기본값은 `db-env.sh`가 읽어 온다. 다른 MySQL을 쓰면 `MYSQL_TCP_PORT`와 `MYSQL_PWD`를 함께 지정한다(직접 지정한 값이 `.env`보다 우선). 앱도 같은 MySQL을 보고 있어야 한다.
@@ -42,7 +43,7 @@ RATE=10 DURATION=2s coffee-coupon-api/load-test/run-all.sh    # 작게 먼저 �
    ```bash
    docker compose up -d --wait
    ```
-   IDE로 앱을 실행하는 경우는 루트 README의 "IDE로 앱 실행하기" 참고.
+   IDE로 앱을 실행하는 경우는 [docs/RUNNING.md의 "IDE로 앱 실행하기"](../../docs/RUNNING.md#ide로-앱-실행하기) 참고.
 2. 검증할 전략을 고르고, `mysql` 명령이 붙을 포트와 비밀번호를 넣어 둔다. **`no-lock`(대조군)부터 먼저 하는 걸 권장**한다. 락이 없을 때 실제로 얼마나 과발급되는지 먼저 확인해두면 나머지 전략의 결과를 해석할 기준이 생긴다.
    ```bash
    STRATEGY=no-lock      # 이후 pessimistic → optimistic → synchronized 순으로 반복
