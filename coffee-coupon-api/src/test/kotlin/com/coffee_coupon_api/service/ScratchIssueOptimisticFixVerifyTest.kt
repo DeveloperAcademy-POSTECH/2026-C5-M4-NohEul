@@ -72,6 +72,6 @@ class ScratchIssueOptimisticFixVerifyTest {
 
         assertEquals(2, successCount.get(), "재고가 2개 남아있는데 2명 다 성공하지 못했다")
         assertEquals(0, failCount.get())
-        assertEquals(2, finalCampaign.issuedQuantity, "최종 수량이 실제 성공 건수와 안 맞는다 — stale entity로 인한 오염 가능성")
+        assertEquals(2, finalCampaign.issuedQuantity, "최종 수량이 실제 성공 건수와 안 맞는다. stale entity로 인한 오염 가능성")
     }
 }

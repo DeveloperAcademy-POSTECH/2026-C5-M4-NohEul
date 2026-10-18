@@ -8,6 +8,6 @@ src/main/resources/application-local.yaml
 
 # 실행과 무관한 파일
 .idea/
-.omc/
+**/.omc/
 load-test/
 HELP.md

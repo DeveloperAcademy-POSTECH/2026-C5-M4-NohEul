@@ -40,7 +40,7 @@ class CouponServiceTest {
         couponCampaignRepository = mock(CouponCampaignRepository::class.java)
         couponTemplateRepository = mock(CouponTemplateRepository::class.java)
         couponIssueRepository = mock(CouponIssueRepository::class.java)
-        // CouponIssueAttempter는 목이 아니라 실제 인스턴스를 씀 — completeIssue/ensureXxx 로직이
+        // CouponIssueAttempter는 목이 아니라 실제 인스턴스를 씀. completeIssue/ensureXxx 로직이
         // 이제 이 클래스 안에 있어서, 실제로 돌아야 기존 테스트들의 리포지토리 스텁이 그대로 유효함.
         couponIssueAttempter = CouponIssueAttempter(couponCampaignRepository, couponIssueRepository)
         // 이 클래스는 synchronized 전략을 검사하지 않는다(그건 CouponServiceConcurrencyTest). 생성자를 채우기 위한 목.
