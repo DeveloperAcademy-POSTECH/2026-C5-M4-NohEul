@@ -59,8 +59,8 @@ class CouponController(
 
     @Operation(
         summary = "쿠폰 발급 (락 없음, 대조군)",
-        description = "지정한 쿠폰을 사용자에게 발급한다. 동시성 제어를 전혀 하지 않아, 동시 요청 시 재고를 초과해서 발급될 수 있다 " +
-            "— 락 전략 비교의 대조군으로 의도적으로 남겨둔 엔드포인트다.",
+        description = "지정한 쿠폰을 사용자에게 발급한다. 동시성 제어를 전혀 하지 않아, 동시 요청 시 재고를 초과해서 발급될 수 있다. " +
+            "락 전략 비교의 대조군으로 의도적으로 남겨둔 엔드포인트다.",
     )
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "발급 성공"),
