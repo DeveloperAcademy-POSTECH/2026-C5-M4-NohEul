@@ -8,7 +8,7 @@
 
 **Tech Stack:** Kotlin, Spring Boot 4.1.0, Spring Data JPA, Hibernate, MySQL(로컬), JUnit 5 + Mockito(서비스 단위 테스트), `@DataJpaTest`(리포지토리 테스트, 실제 로컬 MySQL 사용), `@SpringBootTest`(컨트롤러/동시성 테스트)
 
-**Spec:** `docs/superpowers/specs/2026-08-20-coupon-issue-optimistic-lock-design.md`
+**Spec:** `docs/design/specs/2026-08-20-coupon-issue-optimistic-lock-design.md`
 
 ## Global Constraints
 

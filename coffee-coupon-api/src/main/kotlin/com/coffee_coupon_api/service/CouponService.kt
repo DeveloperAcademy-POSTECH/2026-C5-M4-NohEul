@@ -25,6 +25,7 @@ class CouponService(
     private val couponTemplateRepository: CouponTemplateRepository,
     private val clock: Clock = Clock.systemDefaultZone(),
     private val couponIssueAttempter: CouponIssueAttempter,
+    private val synchronizedCouponIssuer: SynchronizedCouponIssuer,
     private val optimisticMaxAttempts: Int = 3,
 ) {
 
@@ -77,6 +78,12 @@ class CouponService(
             }
         }
         throw CouponIssueConflictException(couponCampaignId, lastException)
+    }
+
+    // @Transactional을 붙이지 않는다: 여기서 트랜잭션을 시작하면 안쪽 Processor가 이 트랜잭션에
+    // 합류해서, 커밋이 락 해제보다 늦어진다. 락과 트랜잭션은 SynchronizedCouponIssuer가 관리한다.
+    fun issueSynchronized(couponCampaignId: Long, userId: Long): CouponIssue {
+        return synchronizedCouponIssuer.issue(couponCampaignId, userId)
     }
 
     private fun incrementIssuedQuantityRaw(couponCampaignId: Long) {

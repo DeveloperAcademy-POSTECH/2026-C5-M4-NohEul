@@ -4,3 +4,8 @@ coffee-coupon-api/src/main/resources/application-local.yaml
 .claude/settings.local.json
 .claude/agents/concurrency-tutor.md
 .claude/agents/spring-kotlin-tutor.md
+
+coffee-coupon-api/load-test/results/
+
+# 로컬 환경 설정. 예시는 .env.example
+.env

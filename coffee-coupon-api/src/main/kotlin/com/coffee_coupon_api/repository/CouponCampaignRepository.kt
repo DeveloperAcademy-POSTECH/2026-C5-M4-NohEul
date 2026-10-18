@@ -23,7 +23,7 @@ interface CouponCampaignRepository : JpaRepository<CouponCampaign, Long> {
     @Query("select c.openAt from CouponCampaign c where c.id = :id")
     fun findOpenAtById(@Param("id") id: Long): LocalDateTime?
 
-    // issueNoLock 전용. 엔티티 기반 save()는 CouponCampaign에 붙은 @Version 때문에 자동으로
+    // 락 없음(issueNoLock)·synchronized(SynchronizedCouponIssueProcessor) 전용. 엔티티 기반 save()는 CouponCampaign에 붙은 @Version 때문에 자동으로
     // 버전 체크를 받아버려서, "락 없음" 시나리오가 의도치 않게 보호받게 된다. HQL 벌크 UPDATE는
     // "versioned" 키워드를 명시하지 않는 한 버전 컬럼을 건드리지 않으므로, 이 쿼리는 완전히
     // 무방비 상태의 증가를 재현한다.

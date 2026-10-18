@@ -56,7 +56,7 @@ class CouponControllerTest {
     @AfterEach
     fun tearDown() {
         // issue-optimistic 테스트는 REQUIRES_NEW가 새 커넥션에서 campaign을 보게 하려고
-        // 테스트 트랜잭션을 커밋하고 끝내버린다 — 그 경우 자동 롤백이 없으니 직접 지운다.
+        // 테스트 트랜잭션을 커밋하고 끝내버린다. 그 경우 자동 롤백이 없으니 직접 지운다.
         // 다른 테스트는 트랜잭션이 아직 열려 있어 롤백될 예정이라, 여기서 지워도 무해하다.
         couponIssueRepository.deleteAll()
         couponCampaignRepository.deleteAll()
@@ -95,6 +95,17 @@ class CouponControllerTest {
 
         mockMvc.perform(
             post("/api/coupons/${campaign.id}/issue-optimistic")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(mapOf("userId" to 1L))),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.userId").value(1))
+    }
+
+    @Test
+    fun `issue-synchronized - 쿠폰을 정상적으로 발급받는다`() {
+        mockMvc.perform(
+            post("/api/coupons/${campaign.id}/issue-synchronized")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(mapOf("userId" to 1L))),
         )

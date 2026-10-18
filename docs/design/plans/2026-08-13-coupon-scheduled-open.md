@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- 스펙 문서: `docs/superpowers/specs/2026-08-13-coupon-scheduled-open-design.md` (2026-08-14 개정판)
+- 스펙 문서: `docs/design/specs/2026-08-13-coupon-scheduled-open-design.md` (2026-08-14 개정판)
 - 브랜치: `feature/coupon-issue-pessimistic-lock`(`dd8e2f1`, `findByIdForUpdate`+`PESSIMISTIC_WRITE` 락 포함) 위에서 시작한 `feature/coupon-scheduled-open`
 - 오픈 전 요청 응답: HTTP 403, 에러 코드 `COUPON_NOT_YET_OPEN`
 - `CouponController`/`CouponService` 클래스명과 API 경로(`/api/coupons/...`)는 그대로 유지한다 — 엔티티/리포지토리 계층만 분리한다

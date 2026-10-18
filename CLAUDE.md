@@ -20,3 +20,8 @@
 - 제목: 커밋 컨벤션과 동일한 `<type>: <설명>` 형식
 - 본문: `.github/PULL_REQUEST_TEMPLATE.md` 구조(Summary / Test plan)를 따르고, 한글로 작성
 - 대응하는 GitHub 이슈가 있으면 `Closes #<번호>`로 연결
+
+## 문서 위치
+
+- 설계 스펙은 `docs/design/specs/`, 구현 계획은 `docs/design/plans/`에 `YYYY-MM-DD-<주제>.md` 형식으로 저장한다. (superpowers 스킬의 기본 경로 `docs/superpowers/` 대신 이 경로를 쓴다.)
+- 실행·테스트·부하테스트 방법은 `docs/RUNNING.md`, 브랜치 전략은 `docs/BRANCHING.md`에 둔다.
