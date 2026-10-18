@@ -8,7 +8,7 @@
 
 **Tech Stack:** Kotlin, Spring Boot 4.1.0, Redisson(`redisson-spring-boot-starter` 4.1.0), Docker(Redis 7), MySQL, JUnit5, Mockito.
 
-**Spec:** `docs/superpowers/specs/2026-08-26-coupon-issue-distributed-lock-design.md`
+**Spec:** `docs/design/specs/2026-08-26-coupon-issue-distributed-lock-design.md`
 
 ## Global Constraints
 
